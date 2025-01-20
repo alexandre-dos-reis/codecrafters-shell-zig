@@ -1,14 +1,14 @@
 const std = @import("std");
 
-const Command = enum { exit, echo, notFound, type };
+const Command = enum { exit, echo, type };
 
-fn parseCommand(input: []const u8) Command {
+fn parseCommand(input: []const u8) ?Command {
     inline for (@typeInfo(Command).Enum.fields) |field| {
         if (std.mem.eql(u8, input, field.name)) {
             return @enumFromInt(field.value);
         }
     }
-    return Command.notFound;
+    return null;
 }
 
 pub fn main() !void {
@@ -21,28 +21,56 @@ pub fn main() !void {
         const user_input = try stdin.readUntilDelimiter(&buffer, '\n');
 
         var iter = std.mem.splitSequence(u8, user_input, " ");
-        const command = iter.next().?;
+        const rawCommand = iter.next().?;
+        const nullishCommand = parseCommand(rawCommand);
 
-        switch (parseCommand(command)) {
-            .exit => {
-                const exitCode = std.fmt.parseInt(u8, iter.next().?, 10) catch 0;
-                std.process.exit(exitCode);
-            },
-            .echo => {
-                try stdout.print("{s}\n", .{iter.rest()});
-            },
-            .notFound => {
-                try stdout.print("{s}: command not found\n", .{command});
-            },
-            .type => {
-                const typeArg = iter.next().?;
-                const commandFound = parseCommand(typeArg);
+        if (nullishCommand == null) {
+            try stdout.print("{s}: not found\n", .{rawCommand});
+        } else {
+            switch (nullishCommand.?) {
+                .exit => {
+                    const exitCode = std.fmt.parseInt(u8, iter.next().?, 10) catch 0;
+                    std.process.exit(exitCode);
+                },
+                .echo => {
+                    try stdout.print("{s}\n", .{iter.rest()});
+                },
+                .type => {
+                    const typeArg = iter.next().?;
+                    const optionalCommandFound = parseCommand(typeArg);
 
-                switch (commandFound) {
-                    .notFound => try stdout.print("{s}: not found\n", .{typeArg}),
-                    else => try stdout.print("{s} is a shell builtin\n", .{typeArg}),
-                }
-            },
+                    if (optionalCommandFound != null) {
+                        try stdout.print("{s} is a shell builtin\n", .{typeArg});
+                    } else {
+                        const envPaths = std.posix.getenv("PATH") orelse "/foo:/bar";
+
+                        var pathIter = std.mem.splitSequence(u8, envPaths, ":");
+
+                        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+                        const allocator = arena.allocator();
+                        arena.deinit();
+
+                        var isFound = false;
+
+                        path: while (pathIter.next()) |path| {
+                            const binaryPath = try std.mem.concat(allocator, u8, &[_][]const u8{ path, "/", typeArg });
+
+                            std.fs.cwd().access(binaryPath, .{ .mode = .read_only }) catch |err| {
+                                if (err == error.FileNotFound) {
+                                    continue :path;
+                                }
+                            };
+
+                            try stdout.print("{s} is {s}\n", .{ typeArg, binaryPath });
+                            isFound = true;
+                            break :path;
+                        }
+                        if (!isFound) {
+                            try stdout.print("{s}: not found\n", .{typeArg});
+                        }
+                    }
+                },
+            }
         }
     }
 }
