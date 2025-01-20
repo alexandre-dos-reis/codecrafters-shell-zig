@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const Command = enum { exit, echo, notFound };
+const Command = enum { exit, echo, notFound, type };
 
 fn parseCommand(input: []const u8) Command {
     inline for (@typeInfo(Command).Enum.fields) |field| {
@@ -32,7 +32,16 @@ pub fn main() !void {
                 try stdout.print("{s}\n", .{iter.rest()});
             },
             .notFound => {
-                stdout.print("{s}: command not found\n", .{command}) catch {};
+                try stdout.print("{s}: command not found\n", .{command});
+            },
+            .type => {
+                const typeArg = iter.next().?;
+                const commandFound = parseCommand(typeArg);
+
+                switch (commandFound) {
+                    .notFound => try stdout.print("{s}: not found\n", .{typeArg}),
+                    else => try stdout.print("{s} is a shell builtin\n", .{typeArg}),
+                }
             },
         }
     }
