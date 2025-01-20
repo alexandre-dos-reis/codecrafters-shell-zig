@@ -3,13 +3,12 @@ const std = @import("std");
 const Command = enum { exit, echo, notFound };
 
 fn parseCommand(input: []const u8) Command {
-    if (std.mem.eql(u8, input, "exit")) {
-        return Command.exit;
-    } else if (std.mem.eql(u8, input, "echo")) {
-        return Command.echo;
-    } else {
-        return Command.notFound;
+    inline for (@typeInfo(Command).Enum.fields) |field| {
+        if (std.mem.eql(u8, input, field.name)) {
+            return @enumFromInt(field.value);
+        }
     }
+    return Command.notFound;
 }
 
 pub fn main() !void {
