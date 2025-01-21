@@ -3,9 +3,13 @@ const std = @import("std");
 const Command = enum { exit, echo, type };
 
 fn findExecutablePath(externalCommand: []const u8) ?[]const u8 {
-    const envPaths = std.posix.getenv("PATH") orelse "/foo:/bar";
+    const envPaths = std.posix.getenv("PATH");
 
-    var pathIter = std.mem.splitSequence(u8, envPaths, ":");
+    if (envPaths == null) {
+        return null;
+    }
+
+    var pathIter = std.mem.splitSequence(u8, envPaths.?, ":");
 
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     const allocator = arena.allocator();
@@ -48,9 +52,8 @@ pub fn main() !void {
                 },
                 .type => {
                     const typeArg = iter.next().?;
-                    const maybeCommand = std.meta.stringToEnum(Command, typeArg);
 
-                    if (maybeCommand) |_| {
+                    if (std.meta.stringToEnum(Command, typeArg)) |_| {
                         try stdout.print("{s} is a shell builtin\n", .{typeArg});
                     } else {
                         if (findExecutablePath(typeArg)) |path| {
@@ -63,11 +66,11 @@ pub fn main() !void {
             }
             // External commands
         } else {
-            if (findExecutablePath(rawCommand)) |path| {
+            if (findExecutablePath(rawCommand)) |_| {
                 var args = std.ArrayList([]const u8).init(std.heap.page_allocator);
                 defer args.deinit();
 
-                try args.append(path);
+                try args.append(rawCommand);
 
                 while (iter.next()) |arg| {
                     try args.append(arg);
