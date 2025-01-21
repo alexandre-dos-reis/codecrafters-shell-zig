@@ -66,11 +66,11 @@ pub fn main() !void {
             }
             // External commands
         } else {
-            if (findExecutablePath(rawCommand)) |_| {
+            if (findExecutablePath(rawCommand)) |path| {
                 var args = std.ArrayList([]const u8).init(std.heap.page_allocator);
                 defer args.deinit();
 
-                try args.append(rawCommand);
+                try args.append(path);
 
                 while (iter.next()) |arg| {
                     try args.append(arg);
