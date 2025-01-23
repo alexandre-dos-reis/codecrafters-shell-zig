@@ -8,7 +8,7 @@ pub fn main() !void {
 
     const stdin = std.io.getStdIn().reader();
     const stdout = std.io.getStdOut().writer();
-    try stdout.print("$ ", .{});
+    try terminal.printPrompt(stdout);
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -35,7 +35,7 @@ pub fn main() !void {
                     try stdout.writeByte(k.byte);
                     try command.run(buffer.items, stdout);
                     try buffer.resize(0);
-                    try stdout.print("$ ", .{});
+                    try terminal.printPrompt(stdout);
                 },
             }
         }

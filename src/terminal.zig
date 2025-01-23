@@ -10,3 +10,7 @@ pub fn setup() !void {
     term.lflag.ECHO = false;
     try std.posix.tcsetattr(fd_t, .NOW, term);
 }
+
+pub fn printPrompt(stdout: anytype) !void {
+    try stdout.print("$ ", .{});
+}
