@@ -2,7 +2,7 @@ const std = @import("std");
 
 const Command = enum { exit, echo, type };
 
-fn findExecutablePath(externalCommand: []const u8) ?[]const u8 {
+fn findExecutablePathFor(externalCommand: []const u8) ?[]const u8 {
     const envPaths = std.posix.getenv("PATH");
 
     if (envPaths == null) {
@@ -30,12 +30,13 @@ fn findExecutablePath(externalCommand: []const u8) ?[]const u8 {
 
 pub fn main() !void {
     while (true) {
+        const stdin = std.io.getStdIn().reader();
         const stdout = std.io.getStdOut().writer();
+
         try stdout.print("$ ", .{});
 
-        const stdin = std.io.getStdIn().reader();
         var buffer: [1024]u8 = undefined;
-        const user_input = try stdin.readUntilDelimiter(&buffer, '\n');
+        const user_input = try stdin.readUntilDelimiter(&buffer, '\t');
 
         var iter = std.mem.splitSequence(u8, user_input, " ");
         const rawCommand = iter.next().?;
@@ -56,7 +57,7 @@ pub fn main() !void {
                     if (std.meta.stringToEnum(Command, typeArg)) |_| {
                         try stdout.print("{s} is a shell builtin\n", .{typeArg});
                     } else {
-                        if (findExecutablePath(typeArg)) |path| {
+                        if (findExecutablePathFor(typeArg)) |path| {
                             try stdout.print("{s} is {s}\n", .{ typeArg, path });
                         } else {
                             try stdout.print("{s}: not found\n", .{typeArg});
@@ -66,7 +67,7 @@ pub fn main() !void {
             }
             // External commands
         } else {
-            if (findExecutablePath(rawCommand)) |path| {
+            if (findExecutablePathFor(rawCommand)) |path| {
                 var args = std.ArrayList([]const u8).init(std.heap.page_allocator);
                 defer args.deinit();
 
