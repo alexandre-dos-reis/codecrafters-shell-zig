@@ -19,10 +19,11 @@ pub fn main() !void {
     while (true) {
         if (try key.get(stdin)) |k| {
             switch (k.type) {
-                .character => {
+                .character, .space => {
                     try stdout.writeByte(k.byte);
                     try buffer.append(k.byte);
                 },
+                .escape => try stdout.writeBytesNTimes("esc", 1),
                 .tabulation => try stdout.writeBytesNTimes("tab", 1),
                 .delete => {
                     // delete , space, delete
@@ -31,12 +32,22 @@ pub fn main() !void {
                         _ = buffer.pop();
                     }
                 },
+                .up, .down, .left, .right => {
+                    try stdout.writeBytesNTimes("arrow", 1);
+                },
                 .enter => {
                     try stdout.writeByte(k.byte);
                     try command.run(buffer.items, stdout);
                     try buffer.resize(0);
                     try terminal.printPrompt(stdout);
                 },
+                .previousWord => {
+                    try stdout.writeBytesNTimes("previous word", 1);
+                },
+                .nextWord => {
+                    try stdout.writeBytesNTimes("next word", 1);
+                },
+                // else => {},
             }
         }
     }
