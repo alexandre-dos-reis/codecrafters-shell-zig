@@ -3,8 +3,17 @@ const terminal = @import("./terminal.zig");
 const key = @import("./key.zig");
 const command = @import("./command.zig");
 
+fn sigintHandler(sig: c_int) callconv(.C) void {
+    _ = sig;
+    std.debug.print("SIGINT received\n", .{});
+
+    terminal.restoreTerminal();
+
+    std.process.exit(130);
+}
+
 pub fn main() !void {
-    try terminal.setup();
+    terminal.setTerminal();
 
     const stdin = std.io.getStdIn().reader();
     const stdout = std.io.getStdOut().writer();
@@ -15,6 +24,17 @@ pub fn main() !void {
 
     var buffer = std.ArrayList(u8).init(gpa.allocator());
     defer buffer.deinit();
+
+    // Manage the Ctrl + C
+    const act = std.os.linux.Sigaction{
+        .handler = .{ .handler = sigintHandler },
+        .mask = std.os.linux.empty_sigset,
+        .flags = 0,
+    };
+
+    if (std.os.linux.sigaction(std.os.linux.SIG.INT, &act, null) != 0) {
+        return error.SignalHandlerError;
+    }
 
     while (true) {
         if (try key.get(stdin)) |k| {
@@ -36,6 +56,7 @@ pub fn main() !void {
                     try stdout.writeBytesNTimes("arrow", 1);
                 },
                 .enter => {
+                    // display `enter` character
                     try stdout.writeByte(k.byte);
                     try command.run(buffer.items, stdout);
                     try buffer.resize(0);

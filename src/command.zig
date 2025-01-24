@@ -1,4 +1,5 @@
 const std = @import("std");
+const terminal = @import("./terminal.zig");
 
 const Command = enum { exit, echo, type };
 
@@ -29,7 +30,13 @@ fn findExecutablePathFor(externalCommand: []const u8) ?[]const u8 {
 }
 
 pub fn run(input: []u8, stdout: anytype) !void {
+    // avoid empty string and whitespaces only
+    if (input.len == 0 or std.mem.trim(u8, input, " ").len == 0) {
+        return;
+    }
+
     var iter = std.mem.splitSequence(u8, input, " ");
+
     const rawCommand = iter.next().?;
 
     // Builtins commands
@@ -37,6 +44,7 @@ pub fn run(input: []u8, stdout: anytype) !void {
         switch (command) {
             .exit => {
                 const exitCode = std.fmt.parseInt(u8, iter.next().?, 10) catch 0;
+                terminal.restoreTerminal();
                 std.process.exit(exitCode);
             },
             .echo => {
@@ -67,8 +75,14 @@ pub fn run(input: []u8, stdout: anytype) !void {
             while (iter.next()) |arg| {
                 try args.append(arg);
             }
+
+            // Restore termios default config to avoid weird behaviors with other programs
+            terminal.restoreTerminal();
+            // Run child process
             var childProcess = std.process.Child.init(args.items, std.heap.page_allocator);
             _ = try childProcess.spawnAndWait();
+            // Reapply termios config
+            terminal.setTerminal();
         } else {
             try stdout.print("{s}: command not found\n", .{rawCommand});
         }

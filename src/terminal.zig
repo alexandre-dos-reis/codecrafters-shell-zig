@@ -1,27 +1,46 @@
 const std = @import("std");
+const c = @cImport({
+    @cInclude("sys/ioctl.h");
+    @cInclude("pty.h");
+});
 
-pub fn setup() !void {
-    // Resources
+var initialTermios: c.termios = undefined;
+var termios: c.termios = undefined;
+const fd: std.posix.fd_t = 0;
+
+/// Restore terminal to default settings.
+pub fn restoreTerminal() void {
+    if (c.tcsetattr(fd, c.TCSANOW, &initialTermios) != 0) {
+        std.log.debug(
+            "Error restoring terminal to it's default state, terminal might be broken !, Please exit the current session.",
+            .{},
+        );
+    }
+}
+
+// TODO: Handle other platforms
+/// Restore terminal to default settings.
+pub fn setTerminal() void {
     // https://linux.die.net/man/3/tcgetattr
     // https://viewsourcecode.org/snaptoken/kilo/02.enteringRawMode.html#a-timeout-for-read
     // https://github.com/ziglang/zig/issues/10181
-    const termios = std.posix.tcgetattr(std.c.STDOUT_FILENO) catch {
-        return error.TcGetAttrFailed;
-    };
-    var t = termios;
+    _ = c.tcgetattr(fd, &initialTermios);
+    termios = initialTermios;
     // Manipulate terminal
-    // Turn off canonical mode => Read char byte by byte instead of line by line term.lflag.ICANON = false;
-    t.lflag.ICANON = false;
+    // Turn off canonical mode => Read char byte by byte instead of line by line
+    termios.c_lflag &= ~@as(@TypeOf(termios.c_lflag), c.ICANON);
     // Turn off echo mode => as we want to manipulate each render.
-    t.lflag.ECHO = false;
+    termios.c_lflag &= ~@as(@TypeOf(termios.c_lflag), c.ECHO);
     // turn off blocking on input
-    // TODO: Handle other platforms
-    t.cc[@intFromEnum(std.os.linux.V.MIN)] = 0;
-    t.cc[@intFromEnum(std.os.linux.V.TIME)] = 0;
+    termios.c_cc[c.VMIN] = 0;
+    termios.c_cc[c.VTIME] = 0;
 
-    std.posix.tcsetattr(std.c.STDOUT_FILENO, std.c.TCSA.NOW, t) catch {
-        return error.TcSetAttrFailed;
-    };
+    if (c.tcsetattr(fd, c.TCSANOW, &termios) != 0) {
+        std.log.debug(
+            "Error setting terminal state, this is mandatory for the shell to run properly !",
+            .{},
+        );
+    }
 }
 
 pub fn printPrompt(stdout: anytype) !void {
