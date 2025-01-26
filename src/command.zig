@@ -1,5 +1,6 @@
 const std = @import("std");
 const terminal = @import("./terminal.zig");
+const types = @import("./types.zig");
 
 const Command = enum { exit, echo, type };
 
@@ -29,13 +30,13 @@ fn findExecutablePathFor(externalCommand: []const u8) ?[]const u8 {
     return null;
 }
 
-pub fn run(input: []u8, stdout: anytype) !void {
+pub fn run(input: *[]u8, stdout: types.StdOut) !void {
     // avoid empty string and whitespaces only
-    if (input.len == 0 or std.mem.trim(u8, input, " ").len == 0) {
+    if (input.len == 0 or std.mem.trim(u8, input.*, " ").len == 0) {
         return;
     }
 
-    var iter = std.mem.splitSequence(u8, input, " ");
+    var iter = std.mem.splitSequence(u8, input.*, " ");
 
     const rawCommand = iter.next().?;
 

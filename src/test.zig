@@ -17,7 +17,7 @@ pub fn main() !void {
 
     const stdin = std.io.getStdIn().reader();
     const stdout = std.io.getStdOut().writer();
-    try terminal.printPrompt(stdout);
+    try terminal.printPrompt(&stdout);
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -37,7 +37,7 @@ pub fn main() !void {
     }
 
     while (true) {
-        if (try key.get(stdin)) |k| {
+        if (try key.get(&stdin)) |k| {
             switch (k.type) {
                 .character, .space => {
                     try stdout.writeByte(k.byte);
@@ -58,9 +58,9 @@ pub fn main() !void {
                 .enter => {
                     // display `enter` character
                     try stdout.writeByte(k.byte);
-                    try command.run(buffer.items, stdout);
+                    try command.run(&buffer.items, &stdout);
                     try buffer.resize(0);
-                    try terminal.printPrompt(stdout);
+                    try terminal.printPrompt(&stdout);
                 },
                 .previousWord => {
                     try stdout.writeBytesNTimes("previous word", 1);

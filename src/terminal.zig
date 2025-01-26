@@ -3,6 +3,7 @@ const c = @cImport({
     @cInclude("sys/ioctl.h");
     @cInclude("pty.h");
 });
+const types = @import("./types.zig");
 
 var initialTermios: c.termios = undefined;
 var termios: c.termios = undefined;
@@ -43,6 +44,6 @@ pub fn setTerminal() void {
     }
 }
 
-pub fn printPrompt(stdout: anytype) !void {
+pub fn printPrompt(stdout: types.StdOut) !void {
     try stdout.print("$ ", .{});
 }

@@ -1,4 +1,5 @@
 const std = @import("std");
+const types = @import("./types.zig");
 
 const KeyType = enum { character, enter, delete, tabulation, space, left, right, up, down, escape, previousWord, nextWord };
 const Key = struct { type: KeyType, byte: u8 };
@@ -9,7 +10,7 @@ fn getByte(stdin: anytype) ?u8 {
     };
 }
 
-pub fn get(stdin: anytype) !?Key {
+pub fn get(stdin: types.StdIn) !?Key {
     const byte = getByte(stdin) orelse {
         return null;
     };
