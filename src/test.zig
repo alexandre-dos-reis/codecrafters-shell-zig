@@ -38,13 +38,12 @@ pub fn main() !void {
 
     while (true) {
         const key = reader.readInput(&stdin);
+
         switch (key.type) {
             .unimplemented => {},
             .character, .space => {
-                if (key.value) |value| {
-                    try stdout.writeByte(value);
-                    try buffer.append(value);
-                }
+                try stdout.writeByte(key.value.?);
+                try buffer.append(key.value.?);
             },
             .escape => try stdout.writeBytesNTimes("esc", 1),
             .tabulation => try stdout.writeBytesNTimes("tab", 1),
@@ -60,12 +59,11 @@ pub fn main() !void {
             },
             .enter => {
                 // display `enter` character
-                if (key.value) |value| {
-                    try stdout.writeByte(value);
-                    try command.run(&buffer.items, &stdout);
-                    try buffer.resize(0);
-                    try terminal.printPrompt(&stdout);
-                }
+                try stdout.writeByte(key.value.?);
+                try command.run(&buffer.items, &stdout);
+                try buffer.resize(0);
+                // std.log.debug("{s}", .{key.value.?});
+                try terminal.printPrompt(&stdout);
             },
         }
     }

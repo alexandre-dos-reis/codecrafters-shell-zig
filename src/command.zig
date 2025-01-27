@@ -44,7 +44,7 @@ pub fn run(input: *[]u8, stdout: types.StdOut) !void {
     if (std.meta.stringToEnum(Command, rawCommand)) |command| {
         switch (command) {
             .exit => {
-                const exitCode = std.fmt.parseInt(u8, iter.next().?, 10) catch 0;
+                const exitCode = std.fmt.parseInt(u8, iter.next() orelse "0", 10) catch 0;
                 terminal.restoreTerminal();
                 std.process.exit(exitCode);
             },
