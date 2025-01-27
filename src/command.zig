@@ -32,7 +32,7 @@ fn findExecutablePathFor(externalCommand: []const u8) ?[]const u8 {
 
 pub fn run(input: *[]u8, stdout: types.StdOut) !void {
     // avoid empty string and whitespaces only
-    if (input.len == 0 or std.mem.trim(u8, input.*, " ").len == 0) {
+    if (input.*.len == 0 or std.mem.trim(u8, input.*, " ").len == 0) {
         return;
     }
 

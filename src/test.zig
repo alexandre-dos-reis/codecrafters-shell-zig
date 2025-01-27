@@ -1,6 +1,6 @@
 const std = @import("std");
 const terminal = @import("./terminal.zig");
-const key = @import("./key.zig");
+const reader = @import("./reader.zig");
 const command = @import("./command.zig");
 
 fn sigintHandler(sig: c_int) callconv(.C) void {
@@ -37,39 +37,36 @@ pub fn main() !void {
     }
 
     while (true) {
-        if (try key.get(&stdin)) |k| {
-            switch (k.type) {
-                .character, .space => {
-                    try stdout.writeByte(k.byte);
-                    try buffer.append(k.byte);
-                },
-                .escape => try stdout.writeBytesNTimes("esc", 1),
-                .tabulation => try stdout.writeBytesNTimes("tab", 1),
-                .delete => {
-                    // delete , space, delete
-                    if (buffer.items.len > 0) {
-                        try stdout.writeBytesNTimes(&[_]u8{ 8, 32, 8 }, 1);
-                        _ = buffer.pop();
-                    }
-                },
-                .up, .down, .left, .right => {
-                    try stdout.writeBytesNTimes("arrow", 1);
-                },
-                .enter => {
-                    // display `enter` character
-                    try stdout.writeByte(k.byte);
+        const key = reader.readInput(&stdin);
+        switch (key.type) {
+            .unimplemented => {},
+            .character, .space => {
+                if (key.value) |value| {
+                    try stdout.writeByte(value);
+                    try buffer.append(value);
+                }
+            },
+            .escape => try stdout.writeBytesNTimes("esc", 1),
+            .tabulation => try stdout.writeBytesNTimes("tab", 1),
+            .backspace => {
+                // delete , space, delete
+                if (buffer.items.len > 0) {
+                    try stdout.writeBytesNTimes(&[_]u8{ 8, 32, 8 }, 1);
+                    _ = buffer.pop();
+                }
+            },
+            .up, .down, .left, .right => {
+                try stdout.writeBytesNTimes("arrow", 1);
+            },
+            .enter => {
+                // display `enter` character
+                if (key.value) |value| {
+                    try stdout.writeByte(value);
                     try command.run(&buffer.items, &stdout);
                     try buffer.resize(0);
                     try terminal.printPrompt(&stdout);
-                },
-                .previousWord => {
-                    try stdout.writeBytesNTimes("previous word", 1);
-                },
-                .nextWord => {
-                    try stdout.writeBytesNTimes("next word", 1);
-                },
-                // else => {},
-            }
+                }
+            },
         }
     }
 }
