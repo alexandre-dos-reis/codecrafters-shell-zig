@@ -19,7 +19,7 @@ var cursorPositionX: u8 = 0;
 var cursorPositionY: u8 = 0;
 
 /// Convert the x and y position to an integer, usefull to compare against the buffer input length
-fn getLimit() ?usize {
+pub fn getCurrentLen() ?usize {
     if (getWinsize()) |ws| {
         const col: usize = @intCast(ws.ws_col);
         return cursorPositionY * col + cursorPositionX;
@@ -28,8 +28,9 @@ fn getLimit() ?usize {
 }
 
 pub fn moveForward(stdout: types.StdOut, inputLen: usize) !void {
-    if (getLimit()) |limit| {
+    if (getCurrentLen()) |limit| {
         if (limit < inputLen) {
+            increment();
             if (getWinsize().?.ws_col == cursorPositionX) {
                 try stdout.writeAll(constants.CSI ++ "E");
             } else {
@@ -37,7 +38,6 @@ pub fn moveForward(stdout: types.StdOut, inputLen: usize) !void {
             }
         }
     }
-    increment();
 }
 
 pub fn moveBackward(stdout: types.StdOut) !void {

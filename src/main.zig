@@ -71,7 +71,7 @@ pub fn main() !void {
                 try stdout.writeByte(key.value.?);
                 try command.run(&bufferInput.items, &stdout);
                 try bufferInput.resize(0);
-                std.log.debug("x:{any} y:{any}", .{ cursor.getPositionX(), cursor.getPositionY() });
+                std.log.debug("x:{any} y:{any} limit:{any}", .{ cursor.getPositionX(), cursor.getPositionY(), cursor.getCurrentLen() });
                 // std.log.debug("{s}", .{key.value.?});
                 // try terminal.printPrompt(&stdout);
                 cursor.resetToInitalPosition();
