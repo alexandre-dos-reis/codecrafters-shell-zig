@@ -18,26 +18,34 @@ pub fn getWinsize() ?c.winsize {
 var cursorPositionX: u8 = 0;
 var cursorPositionY: u8 = 0;
 
-pub fn moveForward(stdout: types.StdOut, doPrint: bool) !void {
-    if (getWinsize()) |winsize| {
-        // TODO: add constraints here from inputBuffer
-        // End of line
-        if (winsize.ws_col == cursorPositionX) {
-            if (doPrint) {
+/// Convert the x and y position to an integer, usefull to compare against the buffer input length
+fn getLimit() ?usize {
+    if (getWinsize()) |ws| {
+        const col: usize = @intCast(ws.ws_col);
+        return cursorPositionY * col + cursorPositionX;
+    }
+    return null;
+}
+
+pub fn moveForward(stdout: types.StdOut, inputLen: usize) !void {
+    if (getLimit()) |limit| {
+        if (limit < inputLen) {
+            if (getWinsize().?.ws_col == cursorPositionX) {
                 try stdout.writeAll(constants.CSI ++ "E");
-            }
-            cursorPositionX = 0;
-            cursorPositionY += 1;
-        } else {
-            if (doPrint) {
+            } else {
                 try stdout.writeAll(constants.CSI ++ "1C");
             }
-            cursorPositionX += 1;
         }
     }
+    increment();
 }
-//
-pub fn moveBackward(stdout: types.StdOut, doPrint: bool) !void {
+
+pub fn moveBackward(stdout: types.StdOut) !void {
+    try stdout.writeByte(8);
+    decrement();
+}
+
+pub fn decrement() void {
     if (getWinsize()) |winsize| {
         // Start of line
         if (cursorPositionX == 0) {
@@ -47,11 +55,20 @@ pub fn moveBackward(stdout: types.StdOut, doPrint: bool) !void {
             cursorPositionX -= 1;
         }
     }
-    if (doPrint) {
-        try stdout.writeByte(8);
+}
+
+pub fn increment() void {
+    if (getWinsize()) |winsize| {
+        // End of line
+        if (winsize.ws_col == cursorPositionX) {
+            cursorPositionX = 0;
+            cursorPositionY += 1;
+        } else {
+            cursorPositionX += 1;
+        }
     }
 }
-//
+
 pub fn resetToInitalPosition() void {
     cursorPositionX = 0;
     cursorPositionY = 0;
@@ -62,5 +79,9 @@ pub fn getPositionX() u8 {
 }
 
 pub fn getPositionY() u8 {
-    return cursorPositionX;
+    return cursorPositionY;
+}
+
+pub fn incrementX() void {
+    cursorPositionX += 1;
 }

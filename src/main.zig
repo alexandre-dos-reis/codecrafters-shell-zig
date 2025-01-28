@@ -45,7 +45,7 @@ pub fn main() !void {
             .character, .space => {
                 try stdout.writeByte(key.value.?);
                 try bufferInput.append(key.value.?);
-                try cursor.moveForward(&stdout, false);
+                cursor.increment();
             },
             .escape => try stdout.writeBytesNTimes("esc", 1),
             .tabulation => try stdout.writeBytesNTimes("tab", 1),
@@ -54,25 +54,24 @@ pub fn main() !void {
                 if (bufferInput.items.len > 0) {
                     try stdout.writeBytesNTimes(&[_]u8{ 8, 32, 8 }, 1);
                     _ = bufferInput.pop();
-                    try cursor.moveBackward(&stdout, false);
+                    cursor.decrement();
                 }
             },
             .up, .down => {
                 try stdout.writeBytesNTimes("arrow", 1);
             },
             .left => {
-                try cursor.moveBackward(&stdout, true);
+                try cursor.moveBackward(&stdout);
             },
             .right => {
-                try cursor.moveForward(&stdout, true);
+                try cursor.moveForward(&stdout, bufferInput.items.len);
             },
             .enter => {
                 // display `enter` character
                 try stdout.writeByte(key.value.?);
                 try command.run(&bufferInput.items, &stdout);
                 try bufferInput.resize(0);
-                const ws = cursor.getWinsize();
-                std.log.debug("pos:{any} col:{any}", .{ cursor.getPositionX(), ws.?.ws_col });
+                std.log.debug("x:{any} y:{any}", .{ cursor.getPositionX(), cursor.getPositionY() });
                 // std.log.debug("{s}", .{key.value.?});
                 // try terminal.printPrompt(&stdout);
                 cursor.resetToInitalPosition();
