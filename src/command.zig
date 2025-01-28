@@ -2,7 +2,7 @@ const std = @import("std");
 const terminal = @import("./terminal.zig");
 const types = @import("./types.zig");
 
-const Command = enum { exit, echo, type };
+const BuiltinCommand = enum { exit, echo, type };
 
 fn findExecutablePathFor(externalCommand: []const u8) ?[]const u8 {
     const envPaths = std.posix.getenv("PATH");
@@ -31,7 +31,7 @@ fn findExecutablePathFor(externalCommand: []const u8) ?[]const u8 {
 }
 
 pub fn run(input: *[]u8, stdout: types.StdOut) !void {
-    // avoid empty string and whitespaces only
+    // avoid empty string or whitespaces string
     if (input.*.len == 0 or std.mem.trim(u8, input.*, " ").len == 0) {
         return;
     }
@@ -41,11 +41,11 @@ pub fn run(input: *[]u8, stdout: types.StdOut) !void {
     const rawCommand = iter.next().?;
 
     // Builtins commands
-    if (std.meta.stringToEnum(Command, rawCommand)) |command| {
+    if (std.meta.stringToEnum(BuiltinCommand, rawCommand)) |command| {
         switch (command) {
             .exit => {
                 const exitCode = std.fmt.parseInt(u8, iter.next() orelse "0", 10) catch 0;
-                terminal.restoreTerminal();
+                terminal.restoreConfigToDefault();
                 std.process.exit(exitCode);
             },
             .echo => {
@@ -54,7 +54,7 @@ pub fn run(input: *[]u8, stdout: types.StdOut) !void {
             .type => {
                 const typeArg = iter.next().?;
 
-                if (std.meta.stringToEnum(Command, typeArg)) |_| {
+                if (std.meta.stringToEnum(BuiltinCommand, typeArg)) |_| {
                     try stdout.print("{s} is a shell builtin\n", .{typeArg});
                 } else {
                     if (findExecutablePathFor(typeArg)) |path| {
@@ -78,12 +78,12 @@ pub fn run(input: *[]u8, stdout: types.StdOut) !void {
             }
 
             // Restore termios default config to avoid weird behaviors with other programs
-            terminal.restoreTerminal();
+            terminal.restoreConfigToDefault();
             // Run child process
             var childProcess = std.process.Child.init(args.items, std.heap.page_allocator);
             _ = try childProcess.spawnAndWait();
             // Reapply termios config
-            terminal.setTerminal();
+            terminal.setConfig();
         } else {
             try stdout.print("{s}: command not found\n", .{rawCommand});
         }

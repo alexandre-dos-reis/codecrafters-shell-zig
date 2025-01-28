@@ -4,14 +4,14 @@ const c = @cImport({
     @cInclude("pty.h");
 });
 const types = @import("./types.zig");
+const constants = @import("./constant.zig");
 
 var initialTermios: c.termios = undefined;
 var termios: c.termios = undefined;
-const fd: std.posix.fd_t = 0;
 
 /// Restore terminal to default settings.
-pub fn restoreTerminal() void {
-    if (c.tcsetattr(fd, c.TCSANOW, &initialTermios) != 0) {
+pub fn restoreConfigToDefault() void {
+    if (c.tcsetattr(constants.FD_T, c.TCSANOW, &initialTermios) != 0) {
         std.log.debug(
             "Error restoring terminal to it's default state, terminal might be broken !, Please exit the current session.",
             .{},
@@ -21,11 +21,11 @@ pub fn restoreTerminal() void {
 
 // TODO: Handle other platforms
 /// Restore terminal to default settings.
-pub fn setTerminal() void {
+pub fn setConfig() void {
     // https://linux.die.net/man/3/tcgetattr
     // https://viewsourcecode.org/snaptoken/kilo/02.enteringRawMode.html#a-timeout-for-read
     // https://github.com/ziglang/zig/issues/10181
-    _ = c.tcgetattr(fd, &initialTermios);
+    _ = c.tcgetattr(constants.FD_T, &initialTermios);
     termios = initialTermios;
     // Manipulate terminal
     // Turn off canonical mode => Read char byte by byte instead of line by line
@@ -36,7 +36,7 @@ pub fn setTerminal() void {
     termios.c_cc[c.VMIN] = 0;
     termios.c_cc[c.VTIME] = 0;
 
-    if (c.tcsetattr(fd, c.TCSANOW, &termios) != 0) {
+    if (c.tcsetattr(constants.FD_T, c.TCSANOW, &termios) != 0) {
         std.log.debug(
             "Error setting terminal state, this is mandatory for the shell to run properly !",
             .{},
@@ -44,6 +44,6 @@ pub fn setTerminal() void {
     }
 }
 
-pub fn printPrompt(stdout: types.StdOut) !void {
-    try stdout.print("$ ", .{});
-}
+// pub fn printPrompt(stdout: types.StdOut) !void {
+//     try stdout.print(constants.LEFT_PROMPT, .{});
+// }
