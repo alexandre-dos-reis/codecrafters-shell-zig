@@ -7,8 +7,6 @@ const c = @cImport({
     @cInclude("termios.h");
 });
 
-const CursorPosition = struct { x: u8, y: u8 };
-
 pub fn getWinsize() ?c.winsize {
     var winsize: c.winsize = undefined;
     if (c.ioctl(constants.FD_T, c.TIOCGWINSZ, &winsize) != 0) {
