@@ -30,19 +30,21 @@ pub fn getCurrentLen() ?usize {
 pub fn moveForward(stdout: types.StdOut, inputLen: usize) !void {
     if (getCurrentLen()) |limit| {
         if (limit < inputLen) {
-            increment();
             if (getWinsize().?.ws_col == cursorPositionX) {
                 try stdout.writeAll(constants.CSI ++ "E");
             } else {
                 try stdout.writeAll(constants.CSI ++ "1C");
             }
+            increment();
         }
     }
 }
 
-pub fn moveBackward(stdout: types.StdOut) !void {
-    try stdout.writeByte(8);
-    decrement();
+pub fn moveBackward(stdout: types.StdOut, inputLen: usize) !void {
+    if (inputLen > 0) {
+        try stdout.writeByte(8);
+        decrement();
+    }
 }
 
 pub fn decrement() void {

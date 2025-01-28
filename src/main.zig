@@ -61,7 +61,7 @@ pub fn main() !void {
                 try stdout.writeBytesNTimes("arrow", 1);
             },
             .left => {
-                try cursor.moveBackward(&stdout);
+                try cursor.moveBackward(&stdout, bufferInput.items.len);
             },
             .right => {
                 try cursor.moveForward(&stdout, bufferInput.items.len);
