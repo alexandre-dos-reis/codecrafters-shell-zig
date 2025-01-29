@@ -15,7 +15,7 @@ fn sigintHandler(sig: c_int) callconv(.C) void {
     std.process.exit(130);
 }
 
-pub fn renderAfterChar(stdout: types.StdOut, input: *std.ArrayList(u8)) !void {
+pub fn renderInsert(stdout: types.StdOut, input: *std.ArrayList(u8)) !void {
     try escapeSeq.clearFromCursorToLineEnd(stdout);
     try escapeSeq.clearFromCursorToScreenEnd(stdout);
 
@@ -67,7 +67,7 @@ pub fn main() !void {
                 try stdout.writeByte(key.value.?);
                 try bufferInput.insert(cursor.getRelativePosition(), key.value.?);
                 cursor.incrementPosition();
-                try renderAfterChar(&stdout, &bufferInput);
+                try renderInsert(&stdout, &bufferInput);
             },
             .escape => try stdout.writeBytesNTimes("esc", 1),
             .tabulation => try stdout.writeBytesNTimes("tab", 1),
@@ -80,17 +80,20 @@ pub fn main() !void {
                     }, 1);
                     cursor.decrementPosition();
                     _ = bufferInput.orderedRemove(cursor.getRelativePosition());
-
-                    try renderAfterChar(&stdout, &bufferInput);
+                    try renderInsert(&stdout, &bufferInput);
                 }
             },
             .up, .down => {
                 try stdout.writeBytesNTimes("arrow", 1);
             },
             .left => {
-                try cursor.moveBackward(&stdout);
+                // TODO: handle jump to previous word with ctrl
+                if (bufferInput.items.len > 0) {
+                    try cursor.moveBackward(&stdout);
+                }
             },
             .right => {
+                // TODO: handle jump to next word with ctrl
                 if (cursor.getRelativePosition() < bufferInput.items.len) {
                     try cursor.moveForward(&stdout);
                 }
