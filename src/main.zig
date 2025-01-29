@@ -73,6 +73,24 @@ pub fn main() !void {
                     try stdout.writeBytesNTimes(&[_]u8{ 8, 32, 8 }, 1);
                     cursor.decrementPosition();
                     _ = bufferInput.orderedRemove(cursor.getCursorPosition());
+
+                    try escapeSeq.clearFromCursorToLineEnd(&stdout);
+                    try escapeSeq.clearFromCursorToScreenEnd(&stdout);
+
+                    const cursorPos = cursor.getCursorPosition();
+                    const input = bufferInput.items;
+
+                    if (cursorPos < input.len) {
+                        var count: u16 = 0;
+                        for (input[cursorPos..input.len]) |value| {
+                            try stdout.writeByte(value);
+                            cursor.incrementPosition();
+                            count += 1;
+                        }
+                        for (0..count) |_| {
+                            try cursor.moveBackward(&stdout, bufferInput.items.len);
+                        }
+                    }
                 }
             },
             .up, .down => {
