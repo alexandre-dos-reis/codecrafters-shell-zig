@@ -2,15 +2,17 @@ const std = @import("std");
 const types = @import("./types.zig");
 
 const KeyType = enum { character, enter, backspace, tabulation, space, left, right, up, down, escape, unimplemented };
-const Key = struct { type: KeyType, value: ?u8, ctrlMod: bool = false, altMod: bool = false };
+const Mod = enum { noMod, alt, ctrl };
+
+const Key = struct { type: KeyType, value: ?u8, mod: Mod };
 
 const ALT_MOD: []const u8 = "ALT_MOD";
 const CTRL_MOD: []const u8 = "CTRL_MOD";
 
 pub fn readInput(stdin: types.StdIn) Key {
-    var key = Key{ .type = .unimplemented, .value = null, .altMod = false, .ctrlMod = false };
+    var key = Key{ .type = .unimplemented, .value = null, .mod = .noMod };
 
-    constructKey(stdin, &key, "ANY");
+    constructKey(stdin, &key, .noMod);
 
     return key;
 }
@@ -21,15 +23,12 @@ fn getByte(stdin: types.StdIn) ?u8 {
     };
 }
 
-fn constructKey(stdin: types.StdIn, key: *Key, mod: []const u8) void {
+fn constructKey(stdin: types.StdIn, key: *Key, mod: Mod) void {
     const byte = getByte(stdin) orelse {
         return;
     };
 
-    key.altMod = std.mem.eql(u8, (mod), ALT_MOD);
-    key.ctrlMod = std.mem.eql(u8, (mod), CTRL_MOD);
-
-    // std.log.debug("first {any}", .{byte});
+    key.mod = mod;
 
     switch (byte) {
         else => {
@@ -104,7 +103,7 @@ fn constructKey(stdin: types.StdIn, key: *Key, mod: []const u8) void {
                                     switch (fifthByte) {
                                         else => return,
                                         53 => {
-                                            constructKey(stdin, key, CTRL_MOD);
+                                            constructKey(stdin, key, .ctrl);
                                             return;
                                         },
                                     }
