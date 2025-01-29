@@ -1,73 +1,58 @@
 const std = @import("std");
 const types = @import("./types.zig");
 const constants = @import("./constant.zig");
-const c = @cImport({
-    @cInclude("sys/ioctl.h");
-    @cInclude("unistd.h");
-    @cInclude("termios.h");
-});
 
-pub fn getWinsize() ?c.winsize {
-    var winsize: c.winsize = undefined;
-    if (c.ioctl(constants.FD_T, c.TIOCGWINSZ, &winsize) != 0) {
-        return null;
+/// TODO: listen to resize handler and to adjust the value
+pub fn getWindowCols() u16 {
+    var ws: std.posix.winsize = undefined;
+    if (std.os.linux.ioctl(constants.FD_T, std.os.linux.T.IOCGWINSZ, @intFromPtr(&ws)) != 0) {
+        return 0;
     }
-    return winsize;
+    return ws.ws_col;
 }
 
-var cursorPositionX: u8 = 0;
-var cursorPositionY: u8 = 0;
+var cursorPositionX: u16 = 0;
+var cursorPositionY: u16 = 0;
 
 /// Convert the x and y position to an integer, usefull to compare against the buffer input length
-pub fn getCurrentLen() ?usize {
-    if (getWinsize()) |ws| {
-        const col: usize = @intCast(ws.ws_col);
-        return cursorPositionY * col + cursorPositionX;
-    }
-    return null;
+pub fn getCursorPosition() usize {
+    return cursorPositionY * getWindowCols() + cursorPositionX;
 }
 
 pub fn moveForward(stdout: types.StdOut, inputLen: usize) !void {
-    if (getCurrentLen()) |limit| {
-        if (limit < inputLen) {
-            if (getWinsize().?.ws_col == cursorPositionX) {
-                try stdout.writeAll(constants.CSI ++ "E");
-            } else {
-                try stdout.writeAll(constants.CSI ++ "1C");
-            }
-            increment();
+    if (getCursorPosition() < inputLen) {
+        if (getWindowCols() == cursorPositionX) {
+            try stdout.writeAll(constants.CSI ++ "E");
+        } else {
+            try stdout.writeAll(constants.CSI ++ "1C");
         }
+        incrementPosition();
     }
 }
 
 pub fn moveBackward(stdout: types.StdOut, inputLen: usize) !void {
     if (inputLen > 0) {
         try stdout.writeByte(8);
-        decrement();
+        decrementPosition();
     }
 }
 
-pub fn decrement() void {
-    if (getWinsize()) |winsize| {
-        // Start of line
-        if (cursorPositionX == 0) {
-            cursorPositionX = @intCast(winsize.ws_col);
-            cursorPositionY -= 1;
-        } else {
-            cursorPositionX -= 1;
-        }
+pub fn decrementPosition() void {
+    if (cursorPositionX == 0) {
+        cursorPositionX = getWindowCols();
+        cursorPositionY -= 1;
+    } else {
+        cursorPositionX -= 1;
     }
 }
 
-pub fn increment() void {
-    if (getWinsize()) |winsize| {
-        // End of line
-        if (winsize.ws_col == cursorPositionX) {
-            cursorPositionX = 0;
-            cursorPositionY += 1;
-        } else {
-            cursorPositionX += 1;
-        }
+pub fn incrementPosition() void {
+    // End of line
+    if (getWindowCols() == cursorPositionX) {
+        cursorPositionX = 0;
+        cursorPositionY += 1;
+    } else {
+        cursorPositionX += 1;
     }
 }
 
@@ -76,14 +61,10 @@ pub fn resetToInitalPosition() void {
     cursorPositionY = 0;
 }
 
-pub fn getPositionX() u8 {
+pub fn getPositionX() u16 {
     return cursorPositionX;
 }
 
-pub fn getPositionY() u8 {
+pub fn getPositionY() u16 {
     return cursorPositionY;
-}
-
-pub fn incrementX() void {
-    cursorPositionX += 1;
 }

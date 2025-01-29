@@ -3,6 +3,7 @@ const terminal = @import("./terminal.zig");
 const reader = @import("./reader.zig");
 const command = @import("./command.zig");
 const cursor = @import("./cursor.zig");
+const escapeSeq = @import("./escape-sequence.zig");
 
 fn sigintHandler(sig: c_int) callconv(.C) void {
     _ = sig;
@@ -44,8 +45,25 @@ pub fn main() !void {
             .unimplemented => {},
             .character, .space => {
                 try stdout.writeByte(key.value.?);
-                try bufferInput.append(key.value.?);
-                cursor.increment();
+                try bufferInput.insert(cursor.getCursorPosition(), key.value.?);
+                cursor.incrementPosition();
+                try escapeSeq.clearFromCursorToLineEnd(&stdout);
+                try escapeSeq.clearFromCursorToScreenEnd(&stdout);
+
+                const cursorPos = cursor.getCursorPosition();
+                const input = bufferInput.items;
+
+                if (cursorPos < input.len) {
+                    var count: u16 = 0;
+                    for (input[cursorPos..input.len]) |value| {
+                        try stdout.writeByte(value);
+                        cursor.incrementPosition();
+                        count += 1;
+                    }
+                    for (0..count) |_| {
+                        try cursor.moveBackward(&stdout, bufferInput.items.len);
+                    }
+                }
             },
             .escape => try stdout.writeBytesNTimes("esc", 1),
             .tabulation => try stdout.writeBytesNTimes("tab", 1),
@@ -53,8 +71,8 @@ pub fn main() !void {
                 // delete , space, delete
                 if (bufferInput.items.len > 0) {
                     try stdout.writeBytesNTimes(&[_]u8{ 8, 32, 8 }, 1);
-                    _ = bufferInput.pop();
-                    cursor.decrement();
+                    cursor.decrementPosition();
+                    _ = bufferInput.orderedRemove(cursor.getCursorPosition());
                 }
             },
             .up, .down => {
@@ -69,9 +87,9 @@ pub fn main() !void {
             .enter => {
                 // display `enter` character
                 try stdout.writeByte(key.value.?);
-                try command.run(&bufferInput.items, &stdout);
+                try command.run(&bufferInput.items);
                 try bufferInput.resize(0);
-                std.log.debug("x:{any} y:{any} limit:{any}", .{ cursor.getPositionX(), cursor.getPositionY(), cursor.getCurrentLen() });
+                std.log.debug("x:{any} y:{any} pos:{any}", .{ cursor.getPositionX(), cursor.getPositionY(), cursor.getCursorPosition() });
                 // std.log.debug("{s}", .{key.value.?});
                 // try terminal.printPrompt(&stdout);
                 cursor.resetToInitalPosition();
