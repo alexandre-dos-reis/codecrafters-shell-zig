@@ -15,23 +15,21 @@ var cursorPositionX: u16 = 0;
 var cursorPositionY: u16 = 0;
 
 /// Convert the x and y position to an integer, usefull to compare against the buffer input length
-pub fn getCursorPosition() usize {
+pub fn getRelativePosition() usize {
     return cursorPositionY * getWindowCols() + cursorPositionX;
 }
 
-pub fn moveForward(stdout: types.StdOut, inputLen: usize) !void {
-    if (getCursorPosition() < inputLen) {
-        if (getWindowCols() == cursorPositionX) {
-            try stdout.writeAll(constants.CSI ++ "E");
-        } else {
-            try stdout.writeAll(constants.CSI ++ "1C");
-        }
-        incrementPosition();
+pub fn moveForward(stdout: types.StdOut) !void {
+    if (getWindowCols() == cursorPositionX) {
+        try stdout.writeAll(constants.CSI ++ "E");
+    } else {
+        try stdout.writeAll(constants.CSI ++ "1C");
     }
+    incrementPosition();
 }
 
-pub fn moveBackward(stdout: types.StdOut, inputLen: usize) !void {
-    if (inputLen > 0) {
+pub fn moveBackward(stdout: types.StdOut) !void {
+    if (getRelativePosition() > 0) {
         try stdout.writeByte(8);
         decrementPosition();
     }
@@ -59,12 +57,4 @@ pub fn incrementPosition() void {
 pub fn resetToInitalPosition() void {
     cursorPositionX = 0;
     cursorPositionY = 0;
-}
-
-pub fn getPositionX() u16 {
-    return cursorPositionX;
-}
-
-pub fn getPositionY() u16 {
-    return cursorPositionY;
 }

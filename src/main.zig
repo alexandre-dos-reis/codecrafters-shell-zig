@@ -4,6 +4,7 @@ const reader = @import("./reader.zig");
 const command = @import("./command.zig");
 const cursor = @import("./cursor.zig");
 const escapeSeq = @import("./escape-sequence.zig");
+const types = @import("./types.zig");
 
 fn sigintHandler(sig: c_int) callconv(.C) void {
     _ = sig;
@@ -12,6 +13,25 @@ fn sigintHandler(sig: c_int) callconv(.C) void {
     terminal.restoreConfigToDefault();
 
     std.process.exit(130);
+}
+
+pub fn renderAfterChar(stdout: types.StdOut, input: *std.ArrayList(u8)) !void {
+    try escapeSeq.clearFromCursorToLineEnd(stdout);
+    try escapeSeq.clearFromCursorToScreenEnd(stdout);
+
+    const cursorPos = cursor.getRelativePosition();
+
+    if (cursorPos < input.*.items.len) {
+        var count: u16 = 0;
+        for (input.*.items[cursorPos..input.*.items.len]) |value| {
+            try stdout.writeByte(value);
+            cursor.incrementPosition();
+            count += 1;
+        }
+        for (0..count) |_| {
+            try cursor.moveBackward(stdout);
+        }
+    }
 }
 
 pub fn main() !void {
@@ -45,71 +65,41 @@ pub fn main() !void {
             .unimplemented => {},
             .character, .space => {
                 try stdout.writeByte(key.value.?);
-                try bufferInput.insert(cursor.getCursorPosition(), key.value.?);
+                try bufferInput.insert(cursor.getRelativePosition(), key.value.?);
                 cursor.incrementPosition();
-                try escapeSeq.clearFromCursorToLineEnd(&stdout);
-                try escapeSeq.clearFromCursorToScreenEnd(&stdout);
-
-                const cursorPos = cursor.getCursorPosition();
-                const input = bufferInput.items;
-
-                if (cursorPos < input.len) {
-                    var count: u16 = 0;
-                    for (input[cursorPos..input.len]) |value| {
-                        try stdout.writeByte(value);
-                        cursor.incrementPosition();
-                        count += 1;
-                    }
-                    for (0..count) |_| {
-                        try cursor.moveBackward(&stdout, bufferInput.items.len);
-                    }
-                }
+                try renderAfterChar(&stdout, &bufferInput);
             },
             .escape => try stdout.writeBytesNTimes("esc", 1),
             .tabulation => try stdout.writeBytesNTimes("tab", 1),
             .backspace => {
-                // delete , space, delete
                 if (bufferInput.items.len > 0) {
-                    try stdout.writeBytesNTimes(&[_]u8{ 8, 32, 8 }, 1);
+                    try stdout.writeBytesNTimes(&[_]u8{
+                        8, // delete
+                        32, // space
+                        8, // delete
+                    }, 1);
                     cursor.decrementPosition();
-                    _ = bufferInput.orderedRemove(cursor.getCursorPosition());
+                    _ = bufferInput.orderedRemove(cursor.getRelativePosition());
 
-                    try escapeSeq.clearFromCursorToLineEnd(&stdout);
-                    try escapeSeq.clearFromCursorToScreenEnd(&stdout);
-
-                    const cursorPos = cursor.getCursorPosition();
-                    const input = bufferInput.items;
-
-                    if (cursorPos < input.len) {
-                        var count: u16 = 0;
-                        for (input[cursorPos..input.len]) |value| {
-                            try stdout.writeByte(value);
-                            cursor.incrementPosition();
-                            count += 1;
-                        }
-                        for (0..count) |_| {
-                            try cursor.moveBackward(&stdout, bufferInput.items.len);
-                        }
-                    }
+                    try renderAfterChar(&stdout, &bufferInput);
                 }
             },
             .up, .down => {
                 try stdout.writeBytesNTimes("arrow", 1);
             },
             .left => {
-                try cursor.moveBackward(&stdout, bufferInput.items.len);
+                try cursor.moveBackward(&stdout);
             },
             .right => {
-                try cursor.moveForward(&stdout, bufferInput.items.len);
+                if (cursor.getRelativePosition() < bufferInput.items.len) {
+                    try cursor.moveForward(&stdout);
+                }
             },
             .enter => {
                 // display `enter` character
                 try stdout.writeByte(key.value.?);
                 try command.run(&bufferInput.items);
                 try bufferInput.resize(0);
-                std.log.debug("x:{any} y:{any} pos:{any}", .{ cursor.getPositionX(), cursor.getPositionY(), cursor.getCursorPosition() });
-                // std.log.debug("{s}", .{key.value.?});
-                // try terminal.printPrompt(&stdout);
                 cursor.resetToInitalPosition();
             },
         }
