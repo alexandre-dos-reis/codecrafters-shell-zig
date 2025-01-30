@@ -1,34 +1,5 @@
-[![progress-banner](https://backend.codecrafters.io/progress/shell/7d0d5910-40c6-4844-bae5-f20b54a4c67a)](https://app.codecrafters.io/users/codecrafters-bot?r=2qF)
+# My shell Zig
 
-This is a starting point for Zig solutions to the
-["Build Your Own Shell" Challenge](https://app.codecrafters.io/courses/shell/overview).
+- [Ansi Escape Sequence Cheat Sheet](https://gist.github.com/ConnerWill/d4b6c776b509add763e17f9f113fd25b)
 
-In this challenge, you'll build your own POSIX compliant shell that's capable of
-interpreting shell commands, running external programs and builtin commands like
-cd, pwd, echo and more. Along the way, you'll learn about shell command parsing,
-REPLs, builtin commands, and more.
-
-**Note**: If you're viewing this repo on GitHub, head over to
-[codecrafters.io](https://codecrafters.io) to try the challenge.
-
-# Passing the first stage
-
-The entry point for your `shell` implementation is in `src/main.zig`. Study and
-uncomment the relevant code, and push your changes to pass the first stage:
-
-```sh
-git commit -am "pass 1st stage" # any msg
-git push origin master
-```
-
-Time to move on to the next stage!
-
-# Stage 2 & beyond
-
-Note: This section is for stages 2 and beyond.
-
-1. Ensure you have `zig (0.13+)` installed locally
-1. Run `./your_program.sh` to run your program, which is implemented in
-   `src/main.zig`.
-1. Commit your changes and run `git push origin master` to submit your solution
-   to CodeCrafters. Test output will be streamed to your terminal.
+## Todos
