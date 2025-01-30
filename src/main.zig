@@ -59,10 +59,9 @@ pub fn main() !void {
     defer bufferInput.deinit();
 
     while (true) {
-        const key = reader.readInput(&stdin);
-
+        const key = try reader.readInput(&stdin);
         switch (key.type) {
-            .unimplemented => {},
+            else => {},
             .character, .space => {
                 try stdout.writeByte(key.value.?);
                 try bufferInput.insert(cursor.getRelativePosition(), key.value.?);
@@ -93,6 +92,7 @@ pub fn main() !void {
                     }
                 },
                 .ctrl => try cursor.moveCursorToPrevious1stWordLetter(&stdout, &bufferInput),
+                .alt => {},
             },
             .right => switch (key.mod) {
                 .none => {
@@ -101,6 +101,7 @@ pub fn main() !void {
                     }
                 },
                 .ctrl => try cursor.moveCursorToNextSpaceChar(&stdout, &bufferInput),
+                .alt => {},
             },
             .enter => {
                 // display `enter` character

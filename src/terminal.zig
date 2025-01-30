@@ -33,7 +33,7 @@ pub fn setConfig() void {
     // Turn off echo mode => as we want to manipulate each render.
     termios.c_lflag &= ~@as(@TypeOf(termios.c_lflag), c.ECHO);
     // turn off blocking on input
-    termios.c_cc[c.VMIN] = 0;
+    termios.c_cc[c.VMIN] = 1;
     termios.c_cc[c.VTIME] = 0;
 
     if (c.tcsetattr(constants.FD_T, c.TCSANOW, &termios) != 0) {
