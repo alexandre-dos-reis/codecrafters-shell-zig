@@ -2,7 +2,7 @@ const std = @import("std");
 const types = @import("./types.zig");
 
 const KeyType = enum { character, enter, backspace, tabulation, space, left, right, up, down, escape, unimplemented };
-const Mod = enum { none, alt, ctrl };
+const Mod = enum { none, ctrl };
 
 const Key = struct { type: KeyType, value: ?u8, mod: Mod };
 

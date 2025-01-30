@@ -93,7 +93,6 @@ pub fn main() !void {
                     }
                 },
                 .ctrl => try cursor.moveCursorToPrevious1stWordLetter(&stdout, &bufferInput),
-                .alt => {},
             },
             .right => switch (key.mod) {
                 .none => {
@@ -102,7 +101,6 @@ pub fn main() !void {
                     }
                 },
                 .ctrl => try cursor.moveCursorToNextSpaceChar(&stdout, &bufferInput),
-                .alt => {},
             },
             .enter => {
                 // display `enter` character
