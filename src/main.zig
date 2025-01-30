@@ -96,7 +96,6 @@ pub fn main() !void {
                     // Move cursor to first letter of previous word
                     if (cursor.getRelativePosition() > 0) {
                         var cursorPos = cursor.getRelativePosition();
-                        var count: u16 = 0;
                         const spaceChar: u8 = 32;
 
                         // Handle case if are already on a first letter
@@ -111,9 +110,6 @@ pub fn main() !void {
                                 break;
                             }
                             cursorPos -= 1;
-                            count += 1;
-                        }
-                        for (0..count) |_| {
                             try cursor.moveBackward(&stdout);
                         }
                     }
@@ -132,7 +128,6 @@ pub fn main() !void {
                     const limit = bufferInput.items.len;
 
                     if (cursorPos < limit) {
-                        var count: u16 = 0;
                         const spaceChar: u8 = 32;
 
                         // handle case where are already on a space after a word.
@@ -147,11 +142,9 @@ pub fn main() !void {
                                 break;
                             }
                             cursorPos += 1;
-                            count += 1;
-                        }
-                        for (0..count + 1) |_| {
                             try cursor.moveForward(&stdout);
                         }
+                        try cursor.moveForward(&stdout);
                     }
                 },
                 .alt => {},
