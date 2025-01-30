@@ -58,3 +58,55 @@ pub fn resetToInitalPosition() void {
     cursorPositionX = 0;
     cursorPositionY = 0;
 }
+
+pub fn moveCursorToNextSpaceChar(stdout: types.StdOut, input: *std.ArrayList(u8)) !void {
+    var cursorPos = getRelativePosition();
+    const bufferInput = input.*;
+    const limit = bufferInput.items.len;
+
+    if (cursorPos < limit) {
+        const spaceCharSlice = " ";
+        const spaceChar = spaceCharSlice[0];
+
+        // handle case where are already on a space after a word.
+        if (bufferInput.items[cursorPos + 1] == spaceChar) {
+            try moveForward(stdout);
+            cursorPos += 1;
+        }
+
+        while (cursorPos + 1 < limit) {
+            const character = bufferInput.items[cursorPos + 1];
+            if (character == spaceChar) {
+                break;
+            }
+            cursorPos += 1;
+            try moveForward(stdout);
+        }
+        try moveForward(stdout);
+    }
+}
+
+pub fn moveCursorToPrevious1stWordLetter(stdout: types.StdOut, input: *std.ArrayList(u8)) !void {
+    const bufferInput = input.*;
+    // Move cursor to first letter of previous word
+    var cursorPos = getRelativePosition();
+    if (cursorPos > 0) {
+        const spaceCharSlice = " ";
+        const spaceChar = spaceCharSlice[0];
+
+        // Handle case if are already on a first letter
+        if (bufferInput.items[cursorPos - 1] == spaceChar) {
+            try moveBackward(stdout);
+            cursorPos -= 1;
+        }
+
+        while (cursorPos > 0) {
+            const character = bufferInput.items[cursorPos - 1];
+            if (character == spaceChar) {
+                break;
+            }
+            cursorPos -= 1;
+            try moveBackward(stdout);
+        }
+    }
+}

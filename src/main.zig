@@ -92,29 +92,7 @@ pub fn main() !void {
                         try cursor.moveBackward(&stdout);
                     }
                 },
-                .ctrl => {
-                    // Move cursor to first letter of previous word
-                    var cursorPos = cursor.getRelativePosition();
-                    if (cursorPos > 0) {
-                        const spaceCharSlice = " ";
-                        const spaceChar = spaceCharSlice[0];
-
-                        // Handle case if are already on a first letter
-                        if (bufferInput.items[cursorPos - 1] == spaceChar) {
-                            try cursor.moveBackward(&stdout);
-                            cursorPos -= 1;
-                        }
-
-                        while (cursorPos > 0) {
-                            const character = bufferInput.items[cursorPos - 1];
-                            if (character == spaceChar) {
-                                break;
-                            }
-                            cursorPos -= 1;
-                            try cursor.moveBackward(&stdout);
-                        }
-                    }
-                },
+                .ctrl => try cursor.moveCursorToPrevious1stWordLetter(&stdout, &bufferInput),
                 .alt => {},
             },
             .right => switch (key.mod) {
@@ -123,32 +101,7 @@ pub fn main() !void {
                         try cursor.moveForward(&stdout);
                     }
                 },
-                .ctrl => {
-                    // move cursor to space after next word
-                    var cursorPos = cursor.getRelativePosition();
-                    const limit = bufferInput.items.len;
-
-                    if (cursorPos < limit) {
-                        const spaceCharSlice = " ";
-                        const spaceChar = spaceCharSlice[0];
-
-                        // handle case where are already on a space after a word.
-                        if (bufferInput.items[cursorPos + 1] == spaceChar) {
-                            try cursor.moveForward(&stdout);
-                            cursorPos += 1;
-                        }
-
-                        while (cursorPos + 1 < limit) {
-                            const character = bufferInput.items[cursorPos + 1];
-                            if (character == spaceChar) {
-                                break;
-                            }
-                            cursorPos += 1;
-                            try cursor.moveForward(&stdout);
-                        }
-                        try cursor.moveForward(&stdout);
-                    }
-                },
+                .ctrl => try cursor.moveCursorToNextSpaceChar(&stdout, &bufferInput),
                 .alt => {},
             },
             .enter => {
