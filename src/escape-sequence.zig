@@ -1,33 +1,32 @@
 const std = @import("std");
 const types = @import("./types.zig");
+const render = @import("./render.zig");
+const CSI = @import("./constant.zig").CSI;
 
-pub const esc = "\x1B";
-const csi = esc ++ "[";
-
-pub fn clearCurrentLine(stdOut: types.StdOut) !void {
-    try stdOut.writeAll(csi ++ "2K");
+pub fn clearCurrentLine() !void {
+    try render.render(CSI ++ "2K");
 }
 
-pub fn clearFromCursorToLineBeginning(stdOut: types.StdOut) !void {
-    try stdOut.writeAll(csi ++ "1K");
+pub fn clearFromCursorToLineBeginning() !void {
+    try render.render(CSI ++ "1K");
 }
 
-pub fn moveCursorToBeginning(stdOut: types.StdOut) !void {
-    try stdOut.writeAll(csi ++ "1D");
+pub fn moveCursorToBeginning() !void {
+    try render.render(CSI ++ "1D");
 }
 
-pub fn clearFromCursorToLineEnd(stdOut: types.StdOut) !void {
-    try stdOut.writeAll(csi ++ "K");
+pub fn clearFromCursorToLineEnd() !void {
+    try render.render(CSI ++ "K");
 }
 
-pub fn clearScreen(stdOut: types.StdOut) !void {
-    try stdOut.writeAll(csi ++ "2J");
+pub fn clearScreen() !void {
+    try render.render(CSI ++ "2J");
 }
 
-pub fn clearFromCursorToScreenBeginning(stdOut: types.StdOut) !void {
-    try stdOut.writeAll(csi ++ "1J");
+pub fn clearFromCursorToScreenBeginning() !void {
+    try render.render(CSI ++ "1J");
 }
 
-pub fn clearFromCursorToScreenEnd(stdOut: types.StdOut) !void {
-    try stdOut.writeAll(csi ++ "J");
+pub fn clearFromCursorToScreenEnd() !void {
+    try render.render(CSI ++ "J");
 }

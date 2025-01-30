@@ -1,6 +1,7 @@
 const std = @import("std");
 const terminal = @import("./terminal.zig");
 const types = @import("./types.zig");
+const render = @import("./render.zig");
 
 const BuiltinCommand = enum { exit, echo, type };
 
@@ -30,7 +31,7 @@ fn findExecutablePathFor(externalCommand: []const u8) ?[]const u8 {
     return null;
 }
 
-pub fn run(input: *[]u8, stdout: types.StdOut) !void {
+pub fn run(input: *[]u8) !void {
     // avoid empty string or whitespaces string
     if (input.*.len == 0 or std.mem.trim(u8, input.*, " ").len == 0) {
         return;
@@ -52,18 +53,18 @@ pub fn run(input: *[]u8, stdout: types.StdOut) !void {
                 std.process.exit(exitCode);
             },
             .echo => {
-                try stdout.print("{s}\n", .{iter.rest()});
+                try render.stdout.print("{s}\n", .{iter.rest()});
             },
             .type => {
                 const typeArg = iter.next().?;
 
                 if (std.meta.stringToEnum(BuiltinCommand, typeArg)) |_| {
-                    try stdout.print("{s} is a shell builtin\n", .{typeArg});
+                    try render.stdout.print("{s} is a shell builtin\n", .{typeArg});
                 } else {
                     if (findExecutablePathFor(typeArg)) |path| {
-                        try stdout.print("{s} is {s}\n", .{ typeArg, path });
+                        try render.stdout.print("{s} is {s}\n", .{ typeArg, path });
                     } else {
-                        try stdout.print("{s}: not found\n", .{typeArg});
+                        try render.stdout.print("{s}: not found\n", .{typeArg});
                     }
                 }
             },
@@ -88,7 +89,7 @@ pub fn run(input: *[]u8, stdout: types.StdOut) !void {
             // Reapply termios config
             terminal.setConfig();
         } else {
-            try stdout.print("{s}: command not found\n", .{rawCommand});
+            try render.stdout.print("{s}: command not found\n", .{rawCommand});
         }
     }
 }

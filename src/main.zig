@@ -5,6 +5,7 @@ const command = @import("./command.zig");
 const cursor = @import("./cursor.zig");
 const escapeSeq = @import("./escape-sequence.zig");
 const types = @import("./types.zig");
+const render = @import("./render.zig");
 
 fn sigintHandler(sig: c_int) callconv(.C) void {
     _ = sig;
@@ -15,30 +16,9 @@ fn sigintHandler(sig: c_int) callconv(.C) void {
     std.process.exit(130);
 }
 
-pub fn renderInsert(stdout: types.StdOut, input: *std.ArrayList(u8)) !void {
-    try escapeSeq.clearFromCursorToLineEnd(stdout);
-    try escapeSeq.clearFromCursorToScreenEnd(stdout);
-
-    const cursorPos = cursor.getRelativePosition();
-
-    if (cursorPos < input.*.items.len) {
-        var count: u16 = 0;
-        for (input.*.items[cursorPos..input.*.items.len]) |value| {
-            try stdout.writeByte(value);
-            cursor.incrementPosition();
-            count += 1;
-        }
-        for (0..count) |_| {
-            try cursor.moveBackward(stdout);
-        }
-    }
-}
-
 pub fn main() !void {
     terminal.setConfig();
 
-    const stdin = std.io.getStdIn().reader();
-    const stdout = std.io.getStdOut().writer();
     // try terminal.printPrompt(&stdout);
 
     // Manage the Ctrl + C
@@ -59,54 +39,50 @@ pub fn main() !void {
     defer bufferInput.deinit();
 
     while (true) {
-        const key = try reader.readInput(&stdin);
+        const key = try reader.readInput();
         switch (key.type) {
             else => {},
             .character, .space => {
-                try stdout.writeByte(key.value.?);
+                try render.renderCharacter(key.value.?);
                 try bufferInput.insert(cursor.getRelativePosition(), key.value.?);
                 cursor.incrementPosition();
-                try renderInsert(&stdout, &bufferInput);
+                try render.renderBufferRest(&bufferInput);
             },
-            .escape => try stdout.writeBytesNTimes("esc", 1),
-            .tabulation => try stdout.writeBytesNTimes("tab", 1),
+            .escape => try render.render("esc"),
+            .tabulation => try render.render("tab"),
             .backspace => {
                 if (bufferInput.items.len > 0) {
-                    try stdout.writeBytesNTimes(&[_]u8{
-                        8, // delete
-                        32, // space
-                        8, // delete
-                    }, 1);
+                    try render.renderBackspace();
                     cursor.decrementPosition();
                     _ = bufferInput.orderedRemove(cursor.getRelativePosition());
-                    try renderInsert(&stdout, &bufferInput);
+                    try render.renderBufferRest(&bufferInput);
                 }
             },
             .up, .down => {
-                try stdout.writeBytesNTimes("arrow", 1);
+                try render.render("arrow");
             },
             .left => switch (key.mod) {
                 .none => {
                     if (bufferInput.items.len > 0) {
-                        try cursor.moveBackward(&stdout);
+                        try cursor.moveBackward();
                     }
                 },
-                .ctrl => try cursor.moveCursorToPrevious1stWordLetter(&stdout, &bufferInput),
+                .ctrl => try cursor.moveCursorToPrevious1stWordLetter(&bufferInput),
                 .alt => {},
             },
             .right => switch (key.mod) {
                 .none => {
                     if (cursor.getRelativePosition() < bufferInput.items.len) {
-                        try cursor.moveForward(&stdout);
+                        try cursor.moveForward();
                     }
                 },
-                .ctrl => try cursor.moveCursorToNextSpaceChar(&stdout, &bufferInput),
+                .ctrl => try cursor.moveCursorToNextSpaceChar(&bufferInput),
                 .alt => {},
             },
             .enter => {
                 // display `enter` character
-                try stdout.writeByte(key.value.?);
-                try command.run(&bufferInput.items, &stdout);
+                try render.renderCharacter(key.value.?);
+                try command.run(&bufferInput.items);
                 try bufferInput.resize(0);
                 cursor.resetToInitalPosition();
             },

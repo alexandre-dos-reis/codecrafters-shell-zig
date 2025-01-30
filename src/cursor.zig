@@ -1,6 +1,7 @@
 const std = @import("std");
 const types = @import("./types.zig");
 const constants = @import("./constant.zig");
+const render = @import("./render.zig");
 
 /// TODO: listen to resize handler and to adjust the value
 pub fn getWindowCols() u16 {
@@ -19,18 +20,18 @@ pub fn getRelativePosition() usize {
     return cursorPositionY * getWindowCols() + cursorPositionX;
 }
 
-pub fn moveForward(stdout: types.StdOut) !void {
+pub fn moveForward() !void {
     if (getWindowCols() == cursorPositionX) {
-        try stdout.writeAll(constants.CSI ++ "E");
+        try render.render(constants.CSI ++ "E");
     } else {
-        try stdout.writeAll(constants.CSI ++ "1C");
+        try render.render(constants.CSI ++ "1C");
     }
     incrementPosition();
 }
 
-pub fn moveBackward(stdout: types.StdOut) !void {
+pub fn moveBackward() !void {
     if (getRelativePosition() > 0) {
-        try stdout.writeByte(8);
+        try render.stdout.writeByte(8);
         decrementPosition();
     }
 }
@@ -59,7 +60,7 @@ pub fn resetToInitalPosition() void {
     cursorPositionY = 0;
 }
 
-pub fn moveCursorToNextSpaceChar(stdout: types.StdOut, input: *std.ArrayList(u8)) !void {
+pub fn moveCursorToNextSpaceChar(input: *std.ArrayList(u8)) !void {
     var cursorPos = getRelativePosition();
     const bufferInput = input.*;
     const limit = bufferInput.items.len;
@@ -70,7 +71,7 @@ pub fn moveCursorToNextSpaceChar(stdout: types.StdOut, input: *std.ArrayList(u8)
 
         // handle case where are already on a space after a word.
         if (bufferInput.items[cursorPos + 1] == spaceChar) {
-            try moveForward(stdout);
+            try moveForward();
             cursorPos += 1;
         }
 
@@ -80,13 +81,13 @@ pub fn moveCursorToNextSpaceChar(stdout: types.StdOut, input: *std.ArrayList(u8)
                 break;
             }
             cursorPos += 1;
-            try moveForward(stdout);
+            try moveForward();
         }
-        try moveForward(stdout);
+        try moveForward();
     }
 }
 
-pub fn moveCursorToPrevious1stWordLetter(stdout: types.StdOut, input: *std.ArrayList(u8)) !void {
+pub fn moveCursorToPrevious1stWordLetter(input: *std.ArrayList(u8)) !void {
     const bufferInput = input.*;
     // Move cursor to first letter of previous word
     var cursorPos = getRelativePosition();
@@ -96,7 +97,7 @@ pub fn moveCursorToPrevious1stWordLetter(stdout: types.StdOut, input: *std.Array
 
         // Handle case if are already on a first letter
         if (bufferInput.items[cursorPos - 1] == spaceChar) {
-            try moveBackward(stdout);
+            try moveBackward();
             cursorPos -= 1;
         }
 
@@ -106,7 +107,7 @@ pub fn moveCursorToPrevious1stWordLetter(stdout: types.StdOut, input: *std.Array
                 break;
             }
             cursorPos -= 1;
-            try moveBackward(stdout);
+            try moveBackward();
         }
     }
 }
