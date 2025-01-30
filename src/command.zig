@@ -36,6 +36,9 @@ pub fn run(input: *[]u8, stdout: types.StdOut) !void {
         return;
     }
 
+    // std.log.debug("input: \"{s}\"", .{input.*});
+    // return;
+
     var iter = std.mem.splitSequence(u8, input.*, " ");
 
     const rawCommand = iter.next().?;

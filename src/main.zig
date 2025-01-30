@@ -107,7 +107,7 @@ pub fn main() !void {
             .enter => {
                 // display `enter` character
                 try stdout.writeByte(key.value.?);
-                try command.run(&bufferInput.items);
+                try command.run(&bufferInput.items, &stdout);
                 try bufferInput.resize(0);
                 cursor.resetToInitalPosition();
             },
