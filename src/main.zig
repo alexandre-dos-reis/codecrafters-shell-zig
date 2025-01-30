@@ -94,9 +94,10 @@ pub fn main() !void {
                 },
                 .ctrl => {
                     // Move cursor to first letter of previous word
-                    if (cursor.getRelativePosition() > 0) {
-                        var cursorPos = cursor.getRelativePosition();
-                        const spaceChar: u8 = 32;
+                    var cursorPos = cursor.getRelativePosition();
+                    if (cursorPos > 0) {
+                        const spaceCharSlice = " ";
+                        const spaceChar = spaceCharSlice[0];
 
                         // Handle case if are already on a first letter
                         if (bufferInput.items[cursorPos - 1] == spaceChar) {
@@ -128,7 +129,8 @@ pub fn main() !void {
                     const limit = bufferInput.items.len;
 
                     if (cursorPos < limit) {
-                        const spaceChar: u8 = 32;
+                        const spaceCharSlice = " ";
+                        const spaceChar = spaceCharSlice[0];
 
                         // handle case where are already on a space after a word.
                         if (bufferInput.items[cursorPos + 1] == spaceChar) {
