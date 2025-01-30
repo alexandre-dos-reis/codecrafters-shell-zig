@@ -86,17 +86,75 @@ pub fn main() !void {
             .up, .down => {
                 try stdout.writeBytesNTimes("arrow", 1);
             },
-            .left => {
-                // TODO: handle jump to previous word with ctrl
-                if (bufferInput.items.len > 0) {
-                    try cursor.moveBackward(&stdout);
-                }
+            .left => switch (key.mod) {
+                .none => {
+                    if (bufferInput.items.len > 0) {
+                        try cursor.moveBackward(&stdout);
+                    }
+                },
+                .ctrl => {
+                    // Move cursor to first letter of previous word
+                    if (cursor.getRelativePosition() > 0) {
+                        var cursorPos = cursor.getRelativePosition();
+                        var count: u16 = 0;
+                        const spaceChar: u8 = 32;
+
+                        // Handle case if are already on a first letter
+                        if (bufferInput.items[cursorPos - 1] == spaceChar) {
+                            try cursor.moveBackward(&stdout);
+                            cursorPos -= 1;
+                        }
+
+                        while (cursorPos > 0) {
+                            const character = bufferInput.items[cursorPos - 1];
+                            if (character == spaceChar) {
+                                break;
+                            }
+                            cursorPos -= 1;
+                            count += 1;
+                        }
+                        for (0..count) |_| {
+                            try cursor.moveBackward(&stdout);
+                        }
+                    }
+                },
+                .alt => {},
             },
-            .right => {
-                // TODO: handle jump to next word with ctrl
-                if (cursor.getRelativePosition() < bufferInput.items.len) {
-                    try cursor.moveForward(&stdout);
-                }
+            .right => switch (key.mod) {
+                .none => {
+                    if (cursor.getRelativePosition() < bufferInput.items.len) {
+                        try cursor.moveForward(&stdout);
+                    }
+                },
+                .ctrl => {
+                    // move cursor to space after next word
+                    var cursorPos = cursor.getRelativePosition();
+                    const limit = bufferInput.items.len;
+
+                    if (cursorPos < limit) {
+                        var count: u16 = 0;
+                        const spaceChar: u8 = 32;
+
+                        // handle case where are already on a space after a word.
+                        if (bufferInput.items[cursorPos + 1] == spaceChar) {
+                            try cursor.moveForward(&stdout);
+                            cursorPos += 1;
+                        }
+
+                        while (cursorPos + 1 < limit) {
+                            const character = bufferInput.items[cursorPos + 1];
+                            if (character == spaceChar) {
+                                break;
+                            }
+                            cursorPos += 1;
+                            count += 1;
+                        }
+                        for (0..count + 1) |_| {
+                            try cursor.moveForward(&stdout);
+                        }
+                    }
+                },
+                .alt => {},
             },
             .enter => {
                 // display `enter` character

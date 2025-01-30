@@ -2,17 +2,16 @@ const std = @import("std");
 const types = @import("./types.zig");
 
 const KeyType = enum { character, enter, backspace, tabulation, space, left, right, up, down, escape, unimplemented };
-const Mod = enum { noMod, alt, ctrl };
+const Mod = enum { none, alt, ctrl };
 
 const Key = struct { type: KeyType, value: ?u8, mod: Mod };
 
-const ALT_MOD: []const u8 = "ALT_MOD";
-const CTRL_MOD: []const u8 = "CTRL_MOD";
+const enableDebug: bool = false;
 
 pub fn readInput(stdin: types.StdIn) Key {
-    var key = Key{ .type = .unimplemented, .value = null, .mod = .noMod };
+    var key = Key{ .type = .unimplemented, .value = null, .mod = .none };
 
-    constructKey(stdin, &key, .noMod);
+    constructKey(stdin, &key);
 
     return key;
 }
@@ -23,12 +22,15 @@ fn getByte(stdin: types.StdIn) ?u8 {
     };
 }
 
-fn constructKey(stdin: types.StdIn, key: *Key, mod: Mod) void {
+/// TODO: rewrite to avoid nesting...
+fn constructKey(stdin: types.StdIn, key: *Key) void {
     const byte = getByte(stdin) orelse {
         return;
     };
 
-    key.mod = mod;
+    if (enableDebug) {
+        std.log.debug("1st:{}", .{byte});
+    }
 
     switch (byte) {
         else => {
@@ -63,6 +65,11 @@ fn constructKey(stdin: types.StdIn, key: *Key, mod: Mod) void {
                 key.value = byte;
                 return;
             };
+
+            if (enableDebug) {
+                std.log.debug("2nd:{}", .{secondByte});
+            }
+
             // std.log.debug("second {any}", .{secondByte});
             switch (secondByte) {
                 else => return,
@@ -70,40 +77,45 @@ fn constructKey(stdin: types.StdIn, key: *Key, mod: Mod) void {
                     const thirdByte = getByte(stdin) orelse {
                         return;
                     };
-                    // std.log.debug("third {any}", .{thirdByte});
+
+                    if (enableDebug) {
+                        std.log.debug("3rd:{}", .{thirdByte});
+                    }
+
+                    if (handleArrowKeys(key, thirdByte)) {
+                        return;
+                    }
+
                     switch (thirdByte) {
                         else => return,
                         // arrow keys
-                        68 => {
-                            key.type = .left;
-                            return;
-                        },
-                        67 => {
-                            key.type = .right;
-                            return;
-                        },
-                        65 => {
-                            key.type = .up;
-                            return;
-                        },
-                        66 => {
-                            key.type = .down;
-                            return;
-                        },
                         49 => {
                             const fourthByte = getByte(stdin) orelse {
                                 return;
                             };
+                            if (enableDebug) {
+                                std.log.debug("4th:{}", .{fourthByte});
+                            }
                             switch (fourthByte) {
                                 else => return,
                                 59 => {
                                     const fifthByte = getByte(stdin) orelse {
                                         return;
                                     };
+                                    if (enableDebug) {
+                                        std.log.debug("5th:{}", .{fifthByte});
+                                    }
                                     switch (fifthByte) {
                                         else => return,
                                         53 => {
-                                            constructKey(stdin, key, .ctrl);
+                                            key.mod = .ctrl;
+                                            const sixthByte = getByte(stdin) orelse {
+                                                return;
+                                            };
+                                            if (enableDebug) {
+                                                std.log.debug("6th:{}", .{sixthByte});
+                                            }
+                                            _ = handleArrowKeys(key, sixthByte);
                                             return;
                                         },
                                     }
@@ -115,4 +127,27 @@ fn constructKey(stdin: types.StdIn, key: *Key, mod: Mod) void {
             }
         },
     }
+}
+
+fn handleArrowKeys(key: *Key, byte: u8) bool {
+    return switch (byte) {
+        else => false,
+        68 => {
+            key.type = .left;
+
+            return true;
+        },
+        67 => {
+            key.type = .right;
+            return true;
+        },
+        65 => {
+            key.type = .up;
+            return true;
+        },
+        66 => {
+            key.type = .down;
+            return true;
+        },
+    };
 }
