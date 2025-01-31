@@ -87,7 +87,7 @@ pub fn run(input: *[]u8) !void {
             var childProcess = std.process.Child.init(args.items, std.heap.page_allocator);
             _ = try childProcess.spawnAndWait();
             // Reapply termios config
-            terminal.setConfig();
+            terminal.setRawMode();
         } else {
             try render.stdout.print("{s}: command not found\n", .{rawCommand});
         }

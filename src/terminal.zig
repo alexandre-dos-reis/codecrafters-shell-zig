@@ -20,18 +20,35 @@ pub fn restoreConfigToDefault() void {
 }
 
 // TODO: Handle other platforms
-/// Restore terminal to default settings.
-pub fn setConfig() void {
+/// Configure Terminal to raw mode, see `man termios` and `cfmakeraw`.
+pub fn setRawMode() void {
     // https://linux.die.net/man/3/tcgetattr
     // https://viewsourcecode.org/snaptoken/kilo/02.enteringRawMode.html#a-timeout-for-read
     // https://github.com/ziglang/zig/issues/10181
     _ = c.tcgetattr(constants.FD_T, &initialTermios);
     termios = initialTermios;
-    // Manipulate terminal
-    // Turn off canonical mode => Read char byte by byte instead of line by line
-    termios.c_lflag &= ~@as(@TypeOf(termios.c_lflag), c.ICANON);
-    // Turn off echo mode => as we want to manipulate each render.
-    termios.c_lflag &= ~@as(@TypeOf(termios.c_lflag), c.ECHO);
+
+    termios.c_lflag &= ~@as(@TypeOf(termios.c_lflag),
+    //
+    (c.ICANON // Turn off canonical mode => Read char byte by byte instead of line by line
+    | c.ECHO // Turn off echo mode => as we want to manipulate each render.
+    | c.ECHONL // TODO: document
+    | c.ISIG // TODO: document
+    | c.IEXTEN // TODO document
+    ));
+
+    termios.c_oflag &= ~@as(@TypeOf(termios.c_oflag),
+    // TODO: document
+    c.OPOST);
+
+    termios.c_iflag &= ~@as(@TypeOf(termios.c_iflag),
+    // TODO document
+    (c.IGNBRK | c.BRKINT | c.PARMRK | c.ISTRIP | c.INLCR | c.IGNCR | c.ICRNL | c.IXON));
+
+    termios.c_cflag &= ~@as(@TypeOf(termios.c_cflag), (c.CSIZE | c.PARENB));
+
+    termios.c_cflag |= ~@as(@TypeOf(termios.c_cflag), c.CS8);
+
     // turn off blocking on input
     termios.c_cc[c.VMIN] = 1;
     termios.c_cc[c.VTIME] = 0;
@@ -43,7 +60,3 @@ pub fn setConfig() void {
         );
     }
 }
-
-// pub fn printPrompt(stdout: types.StdOut) !void {
-//     try stdout.print(constants.LEFT_PROMPT, .{});
-// }

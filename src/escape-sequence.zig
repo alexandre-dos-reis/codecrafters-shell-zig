@@ -12,7 +12,7 @@ pub fn clearFromCursorToLineBeginning() !void {
 }
 
 pub fn moveCursorToBeginning() !void {
-    try render(CSI ++ "1D");
+    try render(CSI ++ "0G");
 }
 
 pub fn clearFromCursorToLineEnd() !void {

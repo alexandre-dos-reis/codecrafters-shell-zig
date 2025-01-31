@@ -17,7 +17,7 @@ fn sigintHandler(sig: c_int) callconv(.C) void {
 }
 
 pub fn main() !void {
-    terminal.setConfig();
+    terminal.setRawMode();
 
     // try terminal.printPrompt(&stdout);
 
@@ -40,22 +40,25 @@ pub fn main() !void {
 
     while (true) {
         const key = try reader.readInput();
+        // std.log.debug("{any}", .{key});
+        // try render.renderCharacter(key.value.?);
         switch (key.type) {
             else => {},
             .character, .space => {
                 try render.renderCharacter(key.value.?);
                 try bufferInput.insert(cursor.getRelativePosition(), key.value.?);
                 cursor.incrementPosition();
-                try render.renderBufferRest(&bufferInput);
+                // try render.renderBufferRest(&bufferInput);
             },
             .escape => try render.render("esc"),
             .tabulation => try render.render("tab"),
             .backspace => {
+                try render.renderCharacter(key.value.?);
                 if (bufferInput.items.len > 0) {
                     try render.renderBackspace();
                     cursor.decrementPosition();
                     _ = bufferInput.orderedRemove(cursor.getRelativePosition());
-                    try render.renderBufferRest(&bufferInput);
+                    // try render.renderBufferRest(&bufferInput);
                 }
             },
             .up, .down => {
@@ -85,6 +88,7 @@ pub fn main() !void {
                 try command.run(&bufferInput.items);
                 try bufferInput.resize(0);
                 cursor.resetToInitalPosition();
+                try escapeSeq.moveCursorToBeginning();
             },
         }
     }

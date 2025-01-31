@@ -37,39 +37,25 @@ pub fn moveBackward() !void {
 }
 
 pub fn decrementPosition() void {
-    if (cursorPositionX == 0) {
-        cursorPositionX = getWindowCols();
-        cursorPositionY -= 1;
-    } else {
-        cursorPositionX -= 1;
-    }
+    decrementPositionBy(1);
 }
 
 pub fn incrementPosition() void {
-    if (getWindowCols() == cursorPositionX) {
-        cursorPositionX = 0;
-        cursorPositionY += 1;
-    } else {
-        cursorPositionX += 1;
-    }
+    incrementPositionBy(1);
 }
 
 pub fn incrementPositionBy(by: u16) void {
     const newPos = getRelativePosition() + by;
     const windowCols = getWindowCols();
     cursorPositionY = (newPos / windowCols);
-    // std.log.debug("y: {any} = {any} : {any}", .{ cursorPositionY, newPos, windowCols });
     cursorPositionX = (newPos % windowCols);
-    // std.log.debug("x: {any} = {any} % {any}", .{ cursorPositionX, newPos, windowCols });
 }
 
 pub fn decrementPositionBy(by: u16) void {
     const newPos = getRelativePosition() - by;
     const windowCols = getWindowCols();
     cursorPositionY = (newPos / windowCols);
-    // std.log.debug("y: {any} = {any} : {any}", .{ cursorPositionY, newPos, windowCols });
     cursorPositionX = (newPos % windowCols);
-    // std.log.debug("x: {any} = {any} % {any}", .{ cursorPositionX, newPos, windowCols });
 }
 
 pub fn resetToInitalPosition() void {

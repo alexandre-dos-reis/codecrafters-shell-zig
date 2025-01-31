@@ -7,20 +7,22 @@ const Mod = enum {
     alt,
 };
 
+const KeyType = enum {
+    unimplemented,
+    character,
+    enter,
+    backspace,
+    tabulation,
+    space,
+    left,
+    right,
+    up,
+    down,
+    escape,
+};
+
 const Key = struct {
-    type: enum {
-        unimplemented,
-        character,
-        enter,
-        backspace,
-        tabulation,
-        space,
-        left,
-        right,
-        up,
-        down,
-        escape,
-    },
+    type: KeyType,
     value: ?u8,
     mod: Mod,
 
@@ -29,7 +31,7 @@ const Key = struct {
 
         switch (byte) {
             else => key.type = .character,
-            10 => key.type = .enter,
+            13 => key.type = .enter,
             127 => key.type = .backspace,
             9 => key.type = .tabulation,
             32 => key.type = .space,
@@ -101,6 +103,7 @@ pub fn readInput() !Key {
     for (bytes, 0..) |byte, i| {
         if (byte == 0 or key.construct(byte, &bytes, i)) break;
     }
+    // std.log.debug("{any} {any}\n", .{ bytes, key });
     return key;
 }
 
