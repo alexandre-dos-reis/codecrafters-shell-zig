@@ -16,7 +16,7 @@ var cursorPositionX: u16 = 0;
 var cursorPositionY: u16 = 0;
 
 /// Convert the x and y position to an integer, usefull to compare against the buffer input length
-pub fn getRelativePosition() usize {
+pub fn getRelativePosition() u16 {
     return cursorPositionY * getWindowCols() + cursorPositionX;
 }
 
@@ -31,7 +31,7 @@ pub fn moveForward() !void {
 
 pub fn moveBackward() !void {
     if (getRelativePosition() > 0) {
-        try render.stdout.writeByte(8);
+        try render.renderCharacter(8);
         decrementPosition();
     }
 }
@@ -46,13 +46,30 @@ pub fn decrementPosition() void {
 }
 
 pub fn incrementPosition() void {
-    // End of line
     if (getWindowCols() == cursorPositionX) {
         cursorPositionX = 0;
         cursorPositionY += 1;
     } else {
         cursorPositionX += 1;
     }
+}
+
+pub fn incrementPositionBy(by: u16) void {
+    const newPos = getRelativePosition() + by;
+    const windowCols = getWindowCols();
+    cursorPositionY = (newPos / windowCols);
+    // std.log.debug("y: {any} = {any} : {any}", .{ cursorPositionY, newPos, windowCols });
+    cursorPositionX = (newPos % windowCols);
+    // std.log.debug("x: {any} = {any} % {any}", .{ cursorPositionX, newPos, windowCols });
+}
+
+pub fn decrementPositionBy(by: u16) void {
+    const newPos = getRelativePosition() - by;
+    const windowCols = getWindowCols();
+    cursorPositionY = (newPos / windowCols);
+    // std.log.debug("y: {any} = {any} : {any}", .{ cursorPositionY, newPos, windowCols });
+    cursorPositionX = (newPos % windowCols);
+    // std.log.debug("x: {any} = {any} % {any}", .{ cursorPositionX, newPos, windowCols });
 }
 
 pub fn resetToInitalPosition() void {
