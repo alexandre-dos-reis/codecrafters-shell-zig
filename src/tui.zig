@@ -51,12 +51,9 @@ fn inputListener(channel: *MsgChannel) !void {
         switch (key.type) {
             .character => {
                 if (key.value) |value| {
-                    switch (value) {
-                        'q' => {
-                            try channel.send(.Quit);
-                            break;
-                        },
-                        else => {},
+                    if (value == 'q' or (value == 'c' and key.mod == .ctrl)) {
+                        try channel.send(.Quit);
+                        break;
                     }
                 }
             },

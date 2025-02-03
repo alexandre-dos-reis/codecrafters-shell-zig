@@ -18,7 +18,6 @@ const KeyType = enum {
     up,
     down,
     escape,
-    quit,
 };
 
 const Key = struct {
@@ -33,7 +32,11 @@ const Key = struct {
             // https://www.gaijin.at/en/infos/ascii-ansi-character-table
             else => {},
             // 1, 2, 4...31 => key.mod = .ctrl,
-            3 => key.type = .quit,
+            3 => {
+                key.mod = .ctrl;
+                const c = "c";
+                key.value = c[0];
+            },
             13 => key.type = .enter,
             127 => key.type = .backspace,
             9 => key.type = .tabulation,
