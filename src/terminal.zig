@@ -5,23 +5,25 @@ const c = @cImport({
 });
 const types = @import("./types.zig");
 const constants = @import("./constant.zig");
+const ansi = @import("./ansi.zig");
 
 var initialTermios: c.termios = undefined;
 var termios: c.termios = undefined;
 
 /// Restore terminal to default settings.
-pub fn restoreConfigToDefault() void {
+pub fn restoreConfigToDefault() !void {
     if (c.tcsetattr(constants.FD_T, c.TCSANOW, &initialTermios) != 0) {
         std.log.debug(
             "Error restoring terminal to it's default state, terminal might be broken !, Please exit the current session.",
             .{},
         );
     }
+    try ansi.showCursor();
 }
 
 // TODO: Handle other platforms
 /// Configure Terminal to raw mode, see `man termios` and `cfmakeraw`.
-pub fn setRawMode() void {
+pub fn setRawMode() !void {
     // https://linux.die.net/man/3/tcgetattr
     // https://viewsourcecode.org/snaptoken/kilo/02.enteringRawMode.html#a-timeout-for-read
     // https://github.com/ziglang/zig/issues/10181
@@ -52,6 +54,8 @@ pub fn setRawMode() void {
     // turn off blocking on input
     termios.c_cc[c.VMIN] = 1;
     termios.c_cc[c.VTIME] = 0;
+
+    try ansi.hideCursor();
 
     if (c.tcsetattr(constants.FD_T, c.TCSANOW, &termios) != 0) {
         std.log.debug(

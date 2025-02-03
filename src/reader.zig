@@ -8,7 +8,6 @@ const Mod = enum {
 };
 
 const KeyType = enum {
-    unimplemented,
     character,
     enter,
     backspace,
@@ -19,6 +18,7 @@ const KeyType = enum {
     up,
     down,
     escape,
+    quit,
 };
 
 const Key = struct {
@@ -30,7 +30,10 @@ const Key = struct {
         key.value = byte;
 
         switch (byte) {
-            else => key.type = .character,
+            // https://www.gaijin.at/en/infos/ascii-ansi-character-table
+            else => {},
+            // 1, 2, 4...31 => key.mod = .ctrl,
+            3 => key.type = .quit,
             13 => key.type = .enter,
             127 => key.type = .backspace,
             9 => key.type = .tabulation,
@@ -96,14 +99,14 @@ fn getBytes() !Buffer {
 }
 
 pub fn readInput() !Key {
-    var key = Key{ .type = .unimplemented, .value = null, .mod = .none };
+    var key = Key{ .type = .character, .value = null, .mod = .none };
 
     const bytes = try getBytes();
 
     for (bytes, 0..) |byte, i| {
         if (byte == 0 or key.construct(byte, &bytes, i)) break;
     }
-    // std.log.debug("{any} {any}\n", .{ bytes, key });
+    std.log.debug("{any} {any}\n", .{ bytes, key });
     return key;
 }
 

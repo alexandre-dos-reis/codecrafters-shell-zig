@@ -6,11 +6,11 @@ const render = @import("./render.zig");
 const Renderer = @This();
 
 timer: ?Timer = null,
+framerate: ?u16 = 120,
+// buffer?: std.ArrayList(u8),
 
-pub fn init(self: *Renderer) !void {
+pub fn start(self: *Renderer) !void {
     self.timer = try Timer.start();
-
-    try ansi.hideCursor();
 }
 
 pub fn print(self: *Renderer, line: []const u8) !void {
@@ -18,7 +18,7 @@ pub fn print(self: *Renderer, line: []const u8) !void {
         // Milliseconds <= Nanoseconds
         const timeInMs = self.timer.?.read() / 1_000_000;
 
-        if (timeInMs >= 1000 / 120) {
+        if (timeInMs >= 1000 / self.framerate.?) {
             _ = self.timer.?.lap();
             try render.render(line);
             // const fps = 1000 / timeInMs;

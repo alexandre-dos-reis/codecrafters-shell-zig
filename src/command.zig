@@ -3,7 +3,28 @@ const terminal = @import("./terminal.zig");
 const types = @import("./types.zig");
 const render = @import("./render.zig");
 
-const BuiltinCommand = enum { exit, echo, type };
+const BuiltinsCommand = enum(u8) { exit = 0, echo = 1, type = 2 };
+const ExternalCommand = enum(u8) { external = 3 };
+
+const CommandEnum = blk: {
+    const bFields = @typeInfo(BuiltinsCommand).Enum.fields;
+    const eFields = @typeInfo(ExternalCommand).Enum.fields;
+    break :blk @Type(.{
+        .Enum = .{
+            .fields = bFields ++ eFields,
+            .is_exhaustive = true,
+            .tag_type = u8,
+            .decls = &[_]std.builtin.Type.Declaration{},
+        },
+    });
+};
+
+const CommandSelected = union(CommandEnum) {
+    exit: u8,
+    echo: []const u8,
+    type: BuiltinsCommand,
+    external: []const u8,
+};
 
 fn findExecutablePathFor(externalCommand: []const u8) ?[]const u8 {
     const envPaths = std.posix.getenv("PATH");
@@ -31,25 +52,31 @@ fn findExecutablePathFor(externalCommand: []const u8) ?[]const u8 {
     return null;
 }
 
-pub fn run(input: *[]u8) !void {
+pub fn run(command: CommandSelected) !void {
+    return switch (command) {
+        .exit => {},
+        .echo => {},
+        .type => {},
+        .external => {},
+    };
+}
+
+pub fn parseCommand(input: *[]u8) !void {
     // avoid empty string or whitespaces string
     if (input.*.len == 0 or std.mem.trim(u8, input.*, " ").len == 0) {
         return;
     }
-
-    // std.log.debug("input: \"{s}\"", .{input.*});
-    // return;
 
     var iter = std.mem.splitSequence(u8, input.*, " ");
 
     const rawCommand = iter.next().?;
 
     // Builtins commands
-    if (std.meta.stringToEnum(BuiltinCommand, rawCommand)) |command| {
+    if (std.meta.stringToEnum(BuiltinsCommand, rawCommand)) |command| {
         switch (command) {
             .exit => {
                 const exitCode = std.fmt.parseInt(u8, iter.next() orelse "0", 10) catch 0;
-                terminal.restoreConfigToDefault();
+                try terminal.restoreConfigToDefault();
                 std.process.exit(exitCode);
             },
             .echo => {
@@ -58,7 +85,7 @@ pub fn run(input: *[]u8) !void {
             .type => {
                 const typeArg = iter.next().?;
 
-                if (std.meta.stringToEnum(BuiltinCommand, typeArg)) |_| {
+                if (std.meta.stringToEnum(BuiltinsCommand, typeArg)) |_| {
                     try render.stdout.print("{s} is a shell builtin\n", .{typeArg});
                 } else {
                     if (findExecutablePathFor(typeArg)) |path| {
@@ -82,12 +109,12 @@ pub fn run(input: *[]u8) !void {
             }
 
             // Restore termios default config to avoid weird behaviors with other programs
-            terminal.restoreConfigToDefault();
+            try terminal.restoreConfigToDefault();
             // Run child process
             var childProcess = std.process.Child.init(args.items, std.heap.page_allocator);
             _ = try childProcess.spawnAndWait();
             // Reapply termios config
-            terminal.setRawMode();
+            try terminal.setRawMode();
         } else {
             try render.stdout.print("{s}: command not found\n", .{rawCommand});
         }
