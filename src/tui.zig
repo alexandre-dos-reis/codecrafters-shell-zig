@@ -49,7 +49,17 @@ fn inputListener(channel: *MsgChannel) !void {
     while (true) {
         const key = try reader.readInput();
         switch (key.type) {
-            .quit => try channel.send(.Quit),
+            .character => {
+                if (key.value) |value| {
+                    switch (value) {
+                        'q' => {
+                            try channel.send(.Quit);
+                            break;
+                        },
+                        else => {},
+                    }
+                }
+            },
             .up => try channel.send(.Increment),
             .down => try channel.send(.Decrement),
             else => {},
@@ -83,8 +93,8 @@ fn run() !void {
     var input_t = try std.Thread.spawn(.{}, inputListener, .{&channel});
     var render_loop_t = try std.Thread.spawn(.{}, renderLoop, .{ &model, &channel });
 
-    defer input_t.join();
-    defer render_loop_t.join();
+    defer input_t.detach();
+    defer render_loop_t.detach();
 
     while (true) {
         const msg = try channel.recv();
