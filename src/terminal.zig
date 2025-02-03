@@ -23,6 +23,7 @@ pub fn restoreConfigToDefault() !void {
 
 // TODO: Handle other platforms
 /// Configure Terminal to raw mode, see `man termios` and `cfmakeraw`.
+/// Inspired by https://github.com/fish-shell/fish-shell/blob/master/src/reader.rs#L4177
 pub fn setRawMode() !void {
     // https://linux.die.net/man/3/tcgetattr
     // https://viewsourcecode.org/snaptoken/kilo/02.enteringRawMode.html#a-timeout-for-read
@@ -39,19 +40,12 @@ pub fn setRawMode() !void {
     | c.IEXTEN // TODO document
     ));
 
-    termios.c_oflag &= ~@as(@TypeOf(termios.c_oflag),
-    // TODO: document
-    c.OPOST);
-
-    termios.c_iflag &= ~@as(@TypeOf(termios.c_iflag),
-    // TODO document
-    (c.IGNBRK | c.BRKINT | c.PARMRK | c.ISTRIP | c.INLCR | c.IGNCR | c.ICRNL | c.IXON));
-
+    termios.c_oflag &= ~@as(@TypeOf(termios.c_oflag), c.OPOST);
+    // termios.c_oflag |= ~@as(@TypeOf(termios.c_oflag), c.ONLCR);
+    termios.c_iflag &= ~@as(@TypeOf(termios.c_iflag), (c.IGNBRK | c.BRKINT | c.PARMRK | c.ISTRIP | c.INLCR | c.IGNCR | c.ICRNL | c.IXON));
     termios.c_cflag &= ~@as(@TypeOf(termios.c_cflag), (c.CSIZE | c.PARENB));
-
     termios.c_cflag |= ~@as(@TypeOf(termios.c_cflag), c.CS8);
 
-    // turn off blocking on input
     termios.c_cc[c.VMIN] = 1;
     termios.c_cc[c.VTIME] = 0;
 

@@ -3,22 +3,34 @@ const reader = @import("./reader.zig");
 const tty = @import("./terminal.zig");
 const Chan = @import("./channel.zig").Chan;
 
-const Msg = union(enum) { Increment, Decrement, Quit, Tick };
+const Msg = union(enum) { Increment, Decrement, Quit, Tick, UpdateTime };
 
 const MsgChannel = Chan(Msg);
 
 pub const Model = struct {
     count: i32,
+    time: [9]u8, // HH:MM:SS format
     lock: std.Thread.Mutex, // Protection pour accès concurrentiel
 };
+// --- Fonction pour récupérer l'heure actuelle ---
+fn getTime() [9]u8 {
+    var buf: [9]u8 = undefined;
+    const timestamp = @as(i64, @intCast(std.time.timestamp()));
+    const secs = @rem(timestamp, 60);
+    const mins = @rem((@divFloor(timestamp, 60)), 60);
+    const hours = @rem((@divFloor(timestamp, 3600)), 24);
+    _ = std.fmt.bufPrint(&buf, "{d}:{d}:{d}", .{ hours, mins, secs }) catch "00:00:00";
+    return buf;
+}
 
-fn updateModel(model: *Model, msg: Msg) void {
+fn update(model: *Model, msg: Msg) void {
     model.lock.lock();
     defer model.lock.unlock();
 
     switch (msg) {
         .Increment => model.count += 1,
         .Decrement => model.count -= 1,
+        .UpdateTime => model.time = getTime(),
         else => {},
     }
 }
@@ -28,8 +40,9 @@ fn renderView(model: *Model) void {
     // defer model.lock.unlock();
 
     std.debug.print("\x1b[2J\x1b[H", .{}); // Effacer l’écran
-    std.debug.print("Compteur: {}\n", .{model.count});
-    std.debug.print("[↑] +1 | [↓] -1 | [q] Quitter\n", .{});
+    std.debug.print("Heure: {s}\n\r", .{getTime()});
+    std.debug.print("Compteur: {}\n\r", .{model.count});
+    std.debug.print("[↑] +1 | [↓] -1 | [q] Quitter\n\r", .{});
 }
 
 fn inputListener(channel: *MsgChannel) !void {
@@ -64,7 +77,7 @@ fn run() !void {
     var channel = MsgChannel.init(allocator);
     defer channel.deinit();
 
-    var model = Model{ .count = 0, .lock = .{} };
+    var model = Model{ .count = 0, .time = getTime(), .lock = .{} };
 
     // Démarrer les threads d’entrée et de rendu
     var input_t = try std.Thread.spawn(.{}, inputListener, .{&channel});
@@ -77,7 +90,7 @@ fn run() !void {
         const msg = try channel.recv();
 
         if (msg == .Quit) break;
-        updateModel(&model, msg); // Mise à jour du modèle avec les messages reçus
+        update(&model, msg); // Mise à jour du modèle avec les messages reçus
     }
 }
 

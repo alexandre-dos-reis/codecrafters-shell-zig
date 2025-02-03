@@ -106,7 +106,7 @@ pub fn readInput() !Key {
     for (bytes, 0..) |byte, i| {
         if (byte == 0 or key.construct(byte, &bytes, i)) break;
     }
-    std.log.debug("{any} {any}\n", .{ bytes, key });
+    // std.log.debug("{any} {any}\n", .{ bytes, key });
     return key;
 }
 
