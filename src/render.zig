@@ -9,8 +9,12 @@ pub fn renderCharacter(byte: u8) !void {
     try stdout.writeByte(byte);
 }
 
-pub fn render(bytes: []const u8) !void {
-    try stdout.writeAll(bytes);
+pub fn render(bytes: []const u8) void {
+    stdout.writeAll(bytes) catch unreachable;
+}
+
+pub fn printFormat(comptime format: []const u8, args: anytype) void {
+    stdout.print(format, args) catch unreachable;
 }
 
 pub fn renderCSI(bytes: []const u8) !void {

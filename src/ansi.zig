@@ -5,38 +5,26 @@ const render = @import("./render.zig").render;
 const ESC = "\x1B";
 const CSI = ESC ++ "[";
 
-pub fn clearCurrentLine() !void {
-    try render(CSI ++ "2K");
-}
+// TERMINAL
+// Focus is an escape sequence to notify the terminal that it has focus.
+const focus = CSI ++ "I";
+// Blur is an escape sequence to notify the terminal that it has lost focus.
+const blur = CSI ++ "O";
 
-pub fn clearFromCursorToLineBeginning() !void {
-    try render(CSI ++ "1K");
-}
+// CLEAR
+pub const clearCurrentLine = CSI ++ "2K";
+pub const clearFromCursorToLineBeginning = CSI ++ "1K";
+pub const clearFromCursorToLineEnd = CSI ++ "K";
+pub const clearScreen = CSI ++ "2J";
+pub const clearFromCursorToScreenBeginning = CSI ++ "1J";
+pub const clearFromCursorToScreenEnd = CSI ++ "J";
 
-pub fn moveCursorToBeginning() !void {
-    try render(CSI ++ "0G");
-}
-
-pub fn clearFromCursorToLineEnd() !void {
-    try render(CSI ++ "K");
-}
-
-pub fn clearScreen() !void {
-    try render(CSI ++ "2J");
-}
-
-pub fn clearFromCursorToScreenBeginning() !void {
-    try render(CSI ++ "1J");
-}
-
-pub fn clearFromCursorToScreenEnd() !void {
-    try render(CSI ++ "J");
-}
-
-pub fn hideCursor() !void {
-    try render(CSI ++ "?25l");
-}
-
-pub fn showCursor() !void {
-    try render(CSI ++ "?25h");
+// CURSOR
+pub const hideCursor = CSI ++ "?25l";
+pub const showCursor = CSI ++ "?25h";
+pub const moveCursorToBeginning = CSI ++ "0G";
+pub const moveCursorToHomePosition = CSI ++ "H";
+pub fn moveCursorTo(line: u16, column: u16) []u8 {
+    var buffer: [10]u8 = undefined;
+    return std.fmt.bufPrint(&buffer, CSI ++ "{d};{d}H", .{ line, column }) catch unreachable;
 }

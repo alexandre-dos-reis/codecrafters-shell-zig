@@ -6,6 +6,7 @@ const c = @cImport({
 const types = @import("./types.zig");
 const constants = @import("./constant.zig");
 const ansi = @import("./ansi.zig");
+const render = @import("./render.zig").render;
 
 var initialTermios: c.termios = undefined;
 var termios: c.termios = undefined;
@@ -18,7 +19,7 @@ pub fn restoreConfigToDefault() !void {
             .{},
         );
     }
-    try ansi.showCursor();
+    render(ansi.showCursor);
 }
 
 // TODO: Handle other platforms
@@ -49,7 +50,7 @@ pub fn setRawMode() !void {
     termios.c_cc[c.VMIN] = 1;
     termios.c_cc[c.VTIME] = 0;
 
-    try ansi.hideCursor();
+    render(ansi.hideCursor);
 
     if (c.tcsetattr(constants.FD_T, c.TCSANOW, &termios) != 0) {
         std.log.debug(

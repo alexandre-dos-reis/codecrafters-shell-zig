@@ -2,6 +2,9 @@ const std = @import("std");
 const reader = @import("./reader.zig");
 const tty = @import("./terminal.zig");
 const Chan = @import("./channel.zig").Chan;
+const render = @import("./render.zig").render;
+const printFormat = @import("./render.zig").printFormat;
+const ansi = @import("./ansi.zig");
 
 const Msg = union(enum) { Increment, Decrement, Quit, Tick, UpdateTime };
 
@@ -11,6 +14,7 @@ pub const Model = struct {
     count: i32,
     time: [9]u8, // HH:MM:SS format
     lock: std.Thread.Mutex, // Protection pour accès concurrentiel
+    lastUpdateTimestamp: i64, // last tick
 };
 // --- Fonction pour récupérer l'heure actuelle ---
 fn getTime() [9]u8 {
@@ -31,18 +35,32 @@ fn update(model: *Model, msg: Msg) void {
         .Increment => model.count += 1,
         .Decrement => model.count -= 1,
         .UpdateTime => model.time = getTime(),
+        .Tick => model.lastUpdateTimestamp = std.time.milliTimestamp(),
         else => {},
     }
 }
 
-fn renderView(model: *Model) void {
-    // model.lock.lock();
-    // defer model.lock.unlock();
+fn toggleCursor(msToggleBlink: u16) void {
+    const now = std.time.milliTimestamp();
 
-    std.debug.print("\x1b[2J\x1b[H", .{}); // Effacer l’écran
-    std.debug.print("Heure: {s}\n\r", .{getTime()});
-    std.debug.print("Compteur: {}\n\r", .{model.count});
-    std.debug.print("[↑] +1 | [↓] -1 | [q] Quitter\n\r", .{});
+    if (@rem(@divFloor(now, msToggleBlink), 2) == 0) {
+        render(ansi.showCursor);
+    } else {
+        render(ansi.hideCursor);
+    }
+}
+
+fn renderView(model: *Model) void {
+    // Don't modify model but only consumed it.
+
+    render(ansi.clearScreen);
+    render(ansi.moveCursorTo(0, 0));
+
+    printFormat("Heure: {s}\n\r", .{getTime()});
+    printFormat("Compteur: {}\n\r", .{model.count});
+    printFormat("[↑] +1 | [↓] -1 | [q] Quitter\n\r", .{});
+
+    toggleCursor(500);
 }
 
 fn inputListener(channel: *MsgChannel) !void {
@@ -84,7 +102,12 @@ fn run() !void {
     var channel = MsgChannel.init(allocator);
     defer channel.deinit();
 
-    var model = Model{ .count = 0, .time = getTime(), .lock = .{} };
+    var model = Model{
+        .count = 0,
+        .time = getTime(),
+        .lock = .{},
+        .lastUpdateTimestamp = std.time.milliTimestamp(),
+    };
 
     // Démarrer les threads d’entrée et de rendu
     var input_t = try std.Thread.spawn(.{}, inputListener, .{&channel});
