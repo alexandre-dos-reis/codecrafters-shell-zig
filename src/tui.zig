@@ -47,7 +47,7 @@ fn renderView(model: *Model) void {
 
 fn inputListener(channel: *MsgChannel) !void {
     while (true) {
-        const key = try reader.readInput();
+        const key = try reader.readKey();
         switch (key.type) {
             .character => {
                 if (key.value) |value| {

@@ -101,7 +101,7 @@ fn getBytes() !Buffer {
     return bytes;
 }
 
-pub fn readInput() !Key {
+pub fn readKey() !Key {
     var key = Key{ .type = .character, .value = null, .mod = .none };
 
     const bytes = try getBytes();
