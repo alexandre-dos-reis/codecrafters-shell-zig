@@ -12,14 +12,22 @@ const Msg = union(enum) { Key: KeyType, Quit, Tick };
 
 const MsgChannel = Chan(Msg);
 
+const BufferInput = std.ArrayListAligned(u8, null);
+
 pub const Model = struct {
     const Self = @This();
     // Protection for concurrent access
     mutex: std.Thread.Mutex = .{},
+
     // counter
     count: i32 = 0,
+
     // last tick timestamp
     lastUpdateTimestamp: i64,
+
+    // main input
+    cursorLocation: u16,
+    bufferInput: *BufferInput,
 };
 
 fn update(model: *Model, msg: Msg) !void {
@@ -31,6 +39,28 @@ fn update(model: *Model, msg: Msg) !void {
         .Key => |k| {
             switch (k.type) {
                 else => {},
+                .character, .space => {
+                    if (k.value) |value| {
+                        try model.bufferInput.insert(model.cursorLocation, value);
+                        model.cursorLocation += 1;
+                    }
+                },
+                .backspace => {
+                    if (model.bufferInput.items.len > 0) {
+                        model.cursorLocation -= 1;
+                        _ = model.bufferInput.orderedRemove(model.cursorLocation);
+                    }
+                },
+                .left => {
+                    if (model.cursorLocation > 0) {
+                        model.cursorLocation -= 1;
+                    }
+                },
+                .right => {
+                    if (model.cursorLocation < model.bufferInput.items.len) {
+                        model.cursorLocation += 1;
+                    }
+                },
                 .up => model.count += 1,
                 .down => model.count -= 1,
             }
@@ -59,6 +89,7 @@ fn renderView(model: *Model) void {
     printFormat("Heure: {s}\n\r", .{time.getcurrentReadableTime()});
     printFormat("Compteur: {}\n\r", .{model.count});
     printFormat("[↑] +1 | [↓] -1 | [q] Quitter\n\r", .{});
+    render(model.bufferInput.items);
 }
 
 fn inputListener(channel: *MsgChannel) !void {
@@ -96,9 +127,14 @@ fn run() !void {
     var channel = MsgChannel.init(allocator);
     defer channel.deinit();
 
+    var bufferInput = std.ArrayList(u8).init(allocator);
+    defer bufferInput.deinit();
+
     var model = Model{
         .count = 0,
         .lastUpdateTimestamp = time.getTickTimestamp(),
+        .bufferInput = &bufferInput,
+        .cursorLocation = 0,
     };
 
     // Démarrer les threads d’entrée et de rendu
@@ -119,6 +155,8 @@ fn run() !void {
 // --- 8. Exécution ---
 pub fn main() !void {
     try tty.setRawMode();
+    defer tty.restoreConfigToDefault() catch unreachable;
+    errdefer tty.restoreConfigToDefault() catch unreachable;
+
     try run();
-    try tty.restoreConfigToDefault();
 }

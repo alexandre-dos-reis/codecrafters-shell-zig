@@ -25,16 +25,6 @@ pub fn main() !void {
 
     try renderer.start();
 
-    // while (true) { const remaining = 10 - i;
-    //
-    //     const output = try std.fmt.bufPrint(&b, "\x1b[1;33mCountdown: {d} seconds\x1b[0m\r", .{remaining});
-    //     // Print countdown number
-    //     try renderer.print(output);
-    //
-    //     // Sleep for 1 second
-    //     std.time.sleep(1_000_000_000);
-    // }
-
     while (true) {
         const key = try reader.readKey();
         try render.renderCharacter(key.value.?);
