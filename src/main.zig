@@ -36,7 +36,7 @@ pub fn main() !void {
     // }
 
     while (true) {
-        const key = try reader.readInput();
+        const key = try reader.readKey();
         try render.renderCharacter(key.value.?);
         switch (key.type) {
             .quit => {

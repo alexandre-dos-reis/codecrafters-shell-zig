@@ -20,7 +20,7 @@ const KeyType = enum {
     escape,
 };
 
-const Key = struct {
+pub const Key = struct {
     type: KeyType,
     value: ?u8,
     mod: Mod,

@@ -5,42 +5,41 @@ const Chan = @import("./channel.zig").Chan;
 const render = @import("./render.zig").render;
 const printFormat = @import("./render.zig").printFormat;
 const ansi = @import("./ansi.zig");
+const KeyType = @import("./reader.zig").Key;
+const time = @import("./time.zig");
 
-const Msg = union(enum) { Increment, Decrement, Quit, Tick, UpdateTime };
+const Msg = union(enum) { Key: KeyType, Quit, Tick };
 
 const MsgChannel = Chan(Msg);
 
 pub const Model = struct {
-    count: i32,
-    time: [9]u8, // HH:MM:SS format
-    lock: std.Thread.Mutex, // Protection pour accès concurrentiel
-    lastUpdateTimestamp: i64, // last tick
+    const Self = @This();
+    // Protection for concurrent access
+    mutex: std.Thread.Mutex = .{},
+    // counter
+    count: i32 = 0,
+    // last tick timestamp
+    lastUpdateTimestamp: i64,
 };
-// --- Fonction pour récupérer l'heure actuelle ---
-fn getTime() [9]u8 {
-    var buf: [9]u8 = undefined;
-    const timestamp = @as(i64, @intCast(std.time.timestamp()));
-    const secs = @rem(timestamp, 60);
-    const mins = @rem((@divFloor(timestamp, 60)), 60);
-    const hours = @rem((@divFloor(timestamp, 3600)), 24);
-    _ = std.fmt.bufPrint(&buf, "{d}:{d}:{d}", .{ hours, mins, secs }) catch "00:00:00";
-    return buf;
-}
 
-fn update(model: *Model, msg: Msg) void {
-    model.lock.lock();
-    defer model.lock.unlock();
+fn update(model: *Model, msg: Msg) !void {
+    model.mutex.lock();
+    defer model.mutex.unlock();
 
     switch (msg) {
-        .Increment => model.count += 1,
-        .Decrement => model.count -= 1,
-        .UpdateTime => model.time = getTime(),
-        .Tick => model.lastUpdateTimestamp = std.time.milliTimestamp(),
+        .Tick => model.lastUpdateTimestamp = time.getTickTimestamp(),
+        .Key => |k| {
+            switch (k.type) {
+                else => {},
+                .up => model.count += 1,
+                .down => model.count -= 1,
+            }
+        },
         else => {},
     }
 }
 
-fn toggleCursor(msToggleBlink: u16) void {
+fn toggleCursor(msToggleBlink: u10) void {
     const now = std.time.milliTimestamp();
 
     if (@rem(@divFloor(now, msToggleBlink), 2) == 0) {
@@ -55,30 +54,25 @@ fn renderView(model: *Model) void {
 
     render(ansi.clearScreen);
     render(ansi.moveCursorTo(0, 0));
+    // toggleCursor(550);
 
-    printFormat("Heure: {s}\n\r", .{getTime()});
+    printFormat("Heure: {s}\n\r", .{time.getcurrentReadableTime()});
     printFormat("Compteur: {}\n\r", .{model.count});
     printFormat("[↑] +1 | [↓] -1 | [q] Quitter\n\r", .{});
-
-    toggleCursor(500);
 }
 
 fn inputListener(channel: *MsgChannel) !void {
     while (true) {
         const key = try reader.readKey();
-        switch (key.type) {
-            .character => {
-                if (key.value) |value| {
-                    if (value == 'q' or (value == 'c' and key.mod == .ctrl)) {
-                        try channel.send(.Quit);
-                        break;
-                    }
-                }
-            },
-            .up => try channel.send(.Increment),
-            .down => try channel.send(.Decrement),
-            else => {},
+
+        if (key.value) |value| {
+            if (value == 'q' or (value == 'c' and key.mod == .ctrl)) {
+                try channel.send(.Quit);
+                return;
+            }
         }
+
+        try channel.send(.{ .Key = key });
     }
 }
 
@@ -104,9 +98,7 @@ fn run() !void {
 
     var model = Model{
         .count = 0,
-        .time = getTime(),
-        .lock = .{},
-        .lastUpdateTimestamp = std.time.milliTimestamp(),
+        .lastUpdateTimestamp = time.getTickTimestamp(),
     };
 
     // Démarrer les threads d’entrée et de rendu
@@ -120,7 +112,7 @@ fn run() !void {
         const msg = try channel.recv();
 
         if (msg == .Quit) break;
-        update(&model, msg); // Mise à jour du modèle avec les messages reçus
+        try update(&model, msg); // Mise à jour du modèle avec les messages reçus
     }
 }
 
