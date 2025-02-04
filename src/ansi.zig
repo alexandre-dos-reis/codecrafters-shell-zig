@@ -3,7 +3,7 @@ const types = @import("./types.zig");
 const render = @import("./render.zig").render;
 
 const ESC = "\x1B";
-const CSI = ESC ++ "[";
+pub const CSI = ESC ++ "[";
 
 // TERMINAL
 // Focus is an escape sequence to notify the terminal that it has focus.
@@ -27,4 +27,12 @@ pub const moveCursorToHomePosition = CSI ++ "H";
 pub fn moveCursorTo(line: u16, column: u16) []u8 {
     var buffer: [10]u8 = undefined;
     return std.fmt.bufPrint(&buffer, CSI ++ "{d};{d}H", .{ line, column }) catch unreachable;
+}
+
+// Style
+pub const resetStyle = CSI ++ "0m";
+
+pub fn bgRed(chars: []const u8) []const u8 {
+    var buffer: []const u8 = undefined;
+    return std.fmt.bufPrint(&buffer, CSI ++ "41m" ++ "{s}" ++ resetStyle, .{chars}) catch unreachable;
 }

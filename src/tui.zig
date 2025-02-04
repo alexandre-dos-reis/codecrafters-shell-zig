@@ -7,12 +7,22 @@ const printFormat = @import("./render.zig").printFormat;
 const ansi = @import("./ansi.zig");
 const KeyType = @import("./reader.zig").Key;
 const time = @import("./time.zig");
+const constants = @import("./constant.zig");
+const Cursor = @import("./cursor.zig").Cursor;
 
 const Msg = union(enum) { Key: KeyType, Quit, Tick };
 
 const MsgChannel = Chan(Msg);
 
 const BufferInput = std.ArrayListAligned(u8, null);
+
+pub fn getWinsize() ?std.posix.winsize {
+    var ws: std.posix.winsize = undefined;
+    if (std.os.linux.ioctl(constants.FD_T, std.os.linux.T.IOCGWINSZ, @intFromPtr(&ws)) != 0) {
+        return null;
+    }
+    return ws;
+}
 
 pub const Model = struct {
     const Self = @This();
@@ -25,8 +35,9 @@ pub const Model = struct {
     // last tick timestamp
     lastUpdateTimestamp: i64,
 
+    cursorXPos: u16 = 0,
+
     // main input
-    cursorLocation: u16,
     bufferInput: *BufferInput,
 };
 
@@ -35,37 +46,37 @@ fn update(model: *Model, msg: Msg) !void {
     defer model.mutex.unlock();
 
     switch (msg) {
+        else => {},
         .Tick => model.lastUpdateTimestamp = time.getTickTimestamp(),
         .Key => |k| {
             switch (k.type) {
                 else => {},
                 .character, .space => {
                     if (k.value) |value| {
-                        try model.bufferInput.insert(model.cursorLocation, value);
-                        model.cursorLocation += 1;
+                        try model.bufferInput.insert(model.cursorXPos, value);
+                        model.cursorXPos += 1;
                     }
                 },
                 .backspace => {
                     if (model.bufferInput.items.len > 0) {
-                        model.cursorLocation -= 1;
-                        _ = model.bufferInput.orderedRemove(model.cursorLocation);
+                        model.cursorXPos -= 1;
+                        _ = model.bufferInput.orderedRemove(model.cursorXPos);
                     }
                 },
                 .left => {
-                    if (model.cursorLocation > 0) {
-                        model.cursorLocation -= 1;
+                    if (model.cursorXPos > 0) {
+                        model.cursorXPos -= 1;
                     }
                 },
                 .right => {
-                    if (model.cursorLocation < model.bufferInput.items.len) {
-                        model.cursorLocation += 1;
+                    if (model.cursorXPos < model.bufferInput.items.len) {
+                        model.cursorXPos -= 1;
                     }
                 },
                 .up => model.count += 1,
                 .down => model.count -= 1,
             }
         },
-        else => {},
     }
 }
 
@@ -80,7 +91,8 @@ fn toggleCursor(msToggleBlink: u10) void {
 }
 
 fn renderView(model: *Model) void {
-    // Don't modify model but only consumed it.
+    // model.mutex.lock();
+    // defer model.mutex.unlock();
 
     render(ansi.clearScreen);
     render(ansi.moveCursorTo(0, 0));
@@ -89,7 +101,12 @@ fn renderView(model: *Model) void {
     printFormat("Heure: {s}\n\r", .{time.getcurrentReadableTime()});
     printFormat("Compteur: {}\n\r", .{model.count});
     printFormat("[↑] +1 | [↓] -1 | [q] Quitter\n\r", .{});
-    render(model.bufferInput.items);
+    // printFormat("columns: {any}\n\r", .{model.columns});
+    // toggleCursor(600);
+    // printFormat("{any}", .{model.bufferInput.items});
+    if (model.bufferInput.items.len == 0) {} else {
+        printFormat(ansi.CSI ++ "41m" ++ "{s}" ++ ansi.resetStyle, .{model.bufferInput.items});
+    }
 }
 
 fn inputListener(channel: *MsgChannel) !void {
@@ -130,11 +147,13 @@ fn run() !void {
     var bufferInput = std.ArrayList(u8).init(allocator);
     defer bufferInput.deinit();
 
+    // const winsize = getWinsize();
     var model = Model{
         .count = 0,
         .lastUpdateTimestamp = time.getTickTimestamp(),
         .bufferInput = &bufferInput,
-        .cursorLocation = 0,
+        // .columns = winsize.?.ws_col,
+        // .cursor = .{ .xPos = 0, .yPos = 0 },
     };
 
     // Démarrer les threads d’entrée et de rendu
