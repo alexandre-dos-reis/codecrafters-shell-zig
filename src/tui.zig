@@ -34,7 +34,6 @@ pub const Model = struct {
 
     // last tick timestamp
     lastUpdateTimestamp: i64,
-    lastInputTimestamp: i64,
 
     cursor: Cursor,
 
@@ -56,14 +55,12 @@ fn update(model: *Model, msg: Msg) !void {
                     if (k.value) |value| {
                         try model.bufferInput.insert(model.cursor.position, value);
                         model.cursor.position += 1;
-                        model.lastInputTimestamp = time.getTickTimestamp();
                     }
                 },
                 .backspace => {
                     if (model.cursor.position > 0) {
                         model.cursor.position -= 1;
                         _ = model.bufferInput.orderedRemove(model.cursor.position);
-                        model.lastInputTimestamp = time.getTickTimestamp();
                     }
                 },
                 .left => {
@@ -71,14 +68,12 @@ fn update(model: *Model, msg: Msg) !void {
                     if (model.cursor.position > 0) {
                         model.cursor.position -= 1;
                         model.cursor.charUnderCursor = model.bufferInput.items[model.cursor.position .. model.cursor.position + 1];
-                        model.lastInputTimestamp = time.getTickTimestamp();
                     }
                 },
                 .right => {
                     if (model.cursor.position < model.bufferInput.items.len - 1) {
                         model.cursor.position += 1;
                         model.cursor.charUnderCursor = model.bufferInput.items[model.cursor.position .. model.cursor.position + 1];
-                        model.lastInputTimestamp = time.getTickTimestamp();
                     }
                 },
                 .up => model.count += 1,
@@ -109,25 +104,11 @@ fn renderView(model: *Model) void {
     printFormat("Heure: {s}\n\r", .{time.getcurrentReadableTime()});
     printFormat("Compteur: {}\n\r", .{model.count});
     printFormat("[↑] +1 | [↓] -1 | [q] Quitter\n\r", .{});
-    printFormat("cursor pos: {any}\n\r", .{
-        model.cursor.position,
-    });
-    printFormat("cursor space char: {s}\n\r", .{
-        model.cursor.charUnderCursor,
-    });
+    printFormat("cursor pos/char: {any}/{s}\n\r", .{ model.cursor.position, model.cursor.charUnderCursor });
 
-    var outputCursor: []const u8 = undefined;
-
-    const delay = 500;
-    if (@rem(@divFloor(model.lastUpdateTimestamp, delay), 2) == 0 or (model.lastUpdateTimestamp - model.lastInputTimestamp) < delay) {
-        outputCursor = model.cursor.cursorChar;
-    } else {
-        outputCursor = model.cursor.charUnderCursor;
-    }
-
-    printFormat("{s}{s}{s}", .{
+    printFormat("{s}" ++ ansi.CSI ++ "41m" ++ "{s}" ++ ansi.resetStyle ++ "{s}", .{
         model.bufferInput.items[0..model.cursor.position],
-        outputCursor,
+        model.cursor.charUnderCursor,
         model.bufferInput.items[model.cursor.position + 1 .. model.bufferInput.items.len],
     });
 }
@@ -178,7 +159,6 @@ fn run() !void {
     var model = Model{
         .count = 0,
         .lastUpdateTimestamp = time.getTickTimestamp(),
-        .lastInputTimestamp = time.getTickTimestamp(),
         .bufferInput = &bufferInput,
         .cursor = .{ .position = 0 },
     };

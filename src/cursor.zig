@@ -7,7 +7,7 @@ const ansi = @import("ansi.zig");
 pub const Cursor = struct {
     position: u16 = 0,
     charUnderCursor: []const u8 = " ",
-    cursorChar: []const u8 = "_",
+    // cursorChar: []const u8 = "_",
     // yPos: u16 = 0,
     // windowColumns: u16 = 0,
 
