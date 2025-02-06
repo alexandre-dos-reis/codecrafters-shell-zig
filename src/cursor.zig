@@ -5,11 +5,11 @@ const render = @import("./render.zig").render;
 const ansi = @import("ansi.zig");
 
 pub const Cursor = struct {
-    xPos: u16 = 0,
-    yPos: u16 = 0,
-    windowColumns: u16 = 0,
-
-    const Self = @This();
+    position: u16 = 0,
+    charUnderCursor: []const u8 = " ",
+    cursorChar: []const u8 = "_",
+    // yPos: u16 = 0,
+    // windowColumns: u16 = 0,
 
     // pub fn getRelativePosition(self: *Self) u16 {
     //     return self.yPos * self.windowColumns + self.xPos;

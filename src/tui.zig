@@ -34,8 +34,9 @@ pub const Model = struct {
 
     // last tick timestamp
     lastUpdateTimestamp: i64,
+    lastInputTimestamp: i64,
 
-    cursorXPos: u16 = 0,
+    cursor: Cursor,
 
     // main input
     bufferInput: *BufferInput,
@@ -53,24 +54,31 @@ fn update(model: *Model, msg: Msg) !void {
                 else => {},
                 .character, .space => {
                     if (k.value) |value| {
-                        try model.bufferInput.insert(model.cursorXPos, value);
-                        model.cursorXPos += 1;
+                        try model.bufferInput.insert(model.cursor.position, value);
+                        model.cursor.position += 1;
+                        model.lastInputTimestamp = time.getTickTimestamp();
                     }
                 },
                 .backspace => {
-                    if (model.bufferInput.items.len > 0) {
-                        model.cursorXPos -= 1;
-                        _ = model.bufferInput.orderedRemove(model.cursorXPos);
+                    if (model.cursor.position > 0) {
+                        model.cursor.position -= 1;
+                        _ = model.bufferInput.orderedRemove(model.cursor.position);
+                        model.lastInputTimestamp = time.getTickTimestamp();
                     }
                 },
                 .left => {
-                    if (model.cursorXPos > 0) {
-                        model.cursorXPos -= 1;
+                    // abc_
+                    if (model.cursor.position > 0) {
+                        model.cursor.position -= 1;
+                        model.cursor.charUnderCursor = model.bufferInput.items[model.cursor.position .. model.cursor.position + 1];
+                        model.lastInputTimestamp = time.getTickTimestamp();
                     }
                 },
                 .right => {
-                    if (model.cursorXPos < model.bufferInput.items.len) {
-                        model.cursorXPos -= 1;
+                    if (model.cursor.position < model.bufferInput.items.len - 1) {
+                        model.cursor.position += 1;
+                        model.cursor.charUnderCursor = model.bufferInput.items[model.cursor.position .. model.cursor.position + 1];
+                        model.lastInputTimestamp = time.getTickTimestamp();
                     }
                 },
                 .up => model.count += 1,
@@ -101,12 +109,27 @@ fn renderView(model: *Model) void {
     printFormat("Heure: {s}\n\r", .{time.getcurrentReadableTime()});
     printFormat("Compteur: {}\n\r", .{model.count});
     printFormat("[↑] +1 | [↓] -1 | [q] Quitter\n\r", .{});
-    // printFormat("columns: {any}\n\r", .{model.columns});
-    // toggleCursor(600);
-    // printFormat("{any}", .{model.bufferInput.items});
-    if (model.bufferInput.items.len == 0) {} else {
-        printFormat(ansi.CSI ++ "41m" ++ "{s}" ++ ansi.resetStyle, .{model.bufferInput.items});
+    printFormat("cursor pos: {any}\n\r", .{
+        model.cursor.position,
+    });
+    printFormat("cursor space char: {s}\n\r", .{
+        model.cursor.charUnderCursor,
+    });
+
+    var outputCursor: []const u8 = undefined;
+
+    const delay = 500;
+    if (@rem(@divFloor(model.lastUpdateTimestamp, delay), 2) == 0 or (model.lastUpdateTimestamp - model.lastInputTimestamp) < delay) {
+        outputCursor = model.cursor.cursorChar;
+    } else {
+        outputCursor = model.cursor.charUnderCursor;
     }
+
+    printFormat("{s}{s}{s}", .{
+        model.bufferInput.items[0..model.cursor.position],
+        outputCursor,
+        model.bufferInput.items[model.cursor.position + 1 .. model.bufferInput.items.len],
+    });
 }
 
 fn inputListener(channel: *MsgChannel) !void {
@@ -147,13 +170,17 @@ fn run() !void {
     var bufferInput = std.ArrayList(u8).init(allocator);
     defer bufferInput.deinit();
 
+    const spaceCharacter = " ";
+
+    try bufferInput.insert(0, spaceCharacter[0]);
+
     // const winsize = getWinsize();
     var model = Model{
         .count = 0,
         .lastUpdateTimestamp = time.getTickTimestamp(),
+        .lastInputTimestamp = time.getTickTimestamp(),
         .bufferInput = &bufferInput,
-        // .columns = winsize.?.ws_col,
-        // .cursor = .{ .xPos = 0, .yPos = 0 },
+        .cursor = .{ .position = 0 },
     };
 
     // Démarrer les threads d’entrée et de rendu
